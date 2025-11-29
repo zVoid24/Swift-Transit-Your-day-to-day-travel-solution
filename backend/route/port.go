@@ -2,15 +2,18 @@ package route
 
 import (
 	"swift_transit/domain"
-	"swift_transit/rest/handlers/route"
 )
 
 type Service interface {
-	route.Service //embedding
+	Create(route domain.Route) (*domain.Route, error)
+	FindAll() ([]domain.Route, error)
+	FindByID(id int64) (*domain.Route, error)
+	FindRoute(start, end string) (*domain.Route, error)
 }
 
 type RouteRepo interface {
+	Create(route domain.Route) (*domain.Route, error)
 	FindAll() ([]domain.Route, error)
 	FindByID(id int64) (*domain.Route, error)
-	Create(route domain.Route) (*domain.Route, error)
+	FindRoute(start, end string) (*domain.Route, error)
 }

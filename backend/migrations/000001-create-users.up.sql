@@ -8,5 +8,5 @@ CREATE TABLE IF NOT EXISTS users (
     email VARCHAR(150) UNIQUE NOT NULL,
     password TEXT NOT NULL,
     is_student BOOLEAN DEFAULT FALSE,
-    balance REAL DEFAULT 0
+    balance REAL DEFAULT 200
 );

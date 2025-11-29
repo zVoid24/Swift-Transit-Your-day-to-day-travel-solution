@@ -2,13 +2,29 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 
 import '../../providers/dashboard_provider.dart';
 import '../profile/profile_screen.dart';
 import '../search/search_screen.dart';
 
-class DashboardScreen extends StatelessWidget {
+class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
+
+  @override
+  State<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends State<DashboardScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Fetch user info when dashboard loads
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<DashboardProvider>(context, listen: false).fetchUserInfo();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -182,6 +198,7 @@ class DashboardScreen extends StatelessWidget {
     return Column(
       children: [
         Container(
+          padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: Colors.white,
             boxShadow: const [
@@ -195,16 +212,16 @@ class DashboardScreen extends StatelessWidget {
           ),
           child: Column(
             children: [
-              _dropdownTile(
+              _textInputTile(
                 "Departure",
-                dash.selectedDeparture,
-                dash.setDeparture,
+                "Enter departure location",
+                (val) => dash.setDeparture(val),
               ),
-              const Divider(height: 1, color: Colors.grey),
-              _dropdownTile(
+              const Divider(height: 20, color: Colors.grey),
+              _textInputTile(
                 "Destination",
-                dash.selectedDestination,
-                dash.setDestination,
+                "Enter destination location",
+                (val) => dash.setDestination(val),
               ),
             ],
           ),
@@ -220,7 +237,9 @@ class DashboardScreen extends StatelessWidget {
                 borderRadius: BorderRadius.circular(12),
               ),
             ),
-            onPressed: () {},
+            onPressed: () {
+              dash.searchBus();
+            },
             child: Text(
               "Search Ticket",
               style: GoogleFonts.poppins(
@@ -230,33 +249,88 @@ class DashboardScreen extends StatelessWidget {
             ),
           ),
         ),
+        if (dash.routePoints.isNotEmpty) ...[
+          const SizedBox(height: 14),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              onPressed: () {
+                dash.buyTicket(context);
+              },
+              child: Text(
+                "Buy Ticket",
+                style: GoogleFonts.poppins(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+          Container(
+            height: 300,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.grey.shade300),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: FlutterMap(
+                options: MapOptions(
+                  initialCenter: dash.routePoints.first,
+                  initialZoom: 13.0,
+                ),
+                children: [
+                  TileLayer(
+                    urlTemplate:
+                        'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                    userAgentPackageName: 'com.example.swifttransit',
+                  ),
+                  PolylineLayer(
+                    polylines: [
+                      Polyline(
+                        points: dash.routePoints,
+                        strokeWidth: 4.0,
+                        color: Colors.blue,
+                      ),
+                    ],
+                  ),
+                  MarkerLayer(markers: dash.markers),
+                ],
+              ),
+            ),
+          ),
+        ],
       ],
     );
   }
 
-  Widget _dropdownTile(
+  Widget _textInputTile(
     String label,
-    String? value,
-    ValueChanged<String?> onChanged,
+    String hint,
+    ValueChanged<String> onChanged,
   ) {
     return ListTile(
-      leading: HugeIcon(
-        icon: label == "Departure"
-            ? HugeIcons.strokeRoundedLocation01
-            : HugeIcons.strokeRoundedLocation09,
+      leading: const HugeIcon(
+        icon: HugeIcons.strokeRoundedLocation01,
         color: Colors.orange,
         size: 24,
       ),
-      title: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          hint: Text("Select $label"),
-          value: value,
-          isExpanded: true,
-          items: ["Uttara", "Gulistan", "Farmgate", "Mirpur"]
-              .map((loc) => DropdownMenuItem(value: loc, child: Text(loc)))
-              .toList(),
-          onChanged: onChanged,
+      title: TextFormField(
+        decoration: InputDecoration(
+          labelText: label,
+          hintText: hint,
+          border: InputBorder.none,
+          contentPadding: EdgeInsets.zero,
         ),
+        onChanged: onChanged,
       ),
     );
   }

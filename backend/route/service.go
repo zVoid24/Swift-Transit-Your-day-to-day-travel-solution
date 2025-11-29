@@ -25,3 +25,7 @@ func (svc *service) FindAll() ([]domain.Route, error) {
 func (svc *service) FindByID(id int64) (*domain.Route, error) {
 	return svc.repo.FindByID(id)
 }
+
+func (svc *service) FindRoute(start, end string) (*domain.Route, error) {
+	return svc.repo.FindRoute(start, end)
+}

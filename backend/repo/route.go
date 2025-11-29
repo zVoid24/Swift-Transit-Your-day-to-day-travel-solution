@@ -12,6 +12,7 @@ import (
 
 type RouteRepo interface {
 	route.RouteRepo
+	FindRoute(start, end string) (*domain.Route, error)
 }
 
 type routeRepo struct {
@@ -109,6 +110,34 @@ func (r *routeRepo) FindByID(id int64) (*domain.Route, error) {
 		return nil, err
 	}
 
+	route.Stops = stops
+
+	return &route, nil
+}
+
+func (r *routeRepo) FindRoute(start, end string) (*domain.Route, error) {
+	var route domain.Route
+	// Find route that has both stops
+	query := `
+		SELECT r.id, r.name, ST_AsGeoJSON(r.geom) as linestring_geojson
+		FROM routes r
+		JOIN stops s1 ON r.id = s1.route_id
+		JOIN stops s2 ON r.id = s2.route_id
+		WHERE s1.name = $1 AND s2.name = $2
+		LIMIT 1
+	`
+	err := r.dbCon.Get(&route, query, start, end)
+	if err != nil {
+		return nil, err
+	}
+
+	// Fetch stops for this route
+	var stops []domain.Stop
+	stopQuery := `SELECT id, route_id, stop_order, name, ST_X(geom::geometry) as lon, ST_Y(geom::geometry) as lat FROM stops WHERE route_id = $1 ORDER BY stop_order`
+	err = r.dbCon.Select(&stops, stopQuery, route.Id)
+	if err != nil {
+		return nil, err
+	}
 	route.Stops = stops
 
 	return &route, nil

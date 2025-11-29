@@ -1,4 +1,8 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+import '../core/constants.dart';
 
 class AuthProvider extends ChangeNotifier {
   bool isLoading = false;
@@ -16,24 +20,71 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> login(String phone, String password) async {
+  Future<bool> login(String mobile, String password) async {
     isLoading = true;
     notifyListeners();
 
-    await Future.delayed(const Duration(seconds: 2));
+    try {
+      final response = await http.post(
+        Uri.parse('${AppConstants.baseUrl}/auth/login'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'mobile': mobile, 'password': password}),
+      );
 
-    isLoading = false;
-    notifyListeners();
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('jwt', data['jwt']);
+        await prefs.setString('user', jsonEncode(data['user']));
+
+        isLoading = false;
+        notifyListeners();
+        return true;
+      } else {
+        isLoading = false;
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      isLoading = false;
+      notifyListeners();
+      return false;
+    }
   }
 
-  Future<void> signup() async {
+  Future<bool> signup() async {
     isLoading = true;
     notifyListeners();
 
-    await Future.delayed(const Duration(seconds: 2));
+    try {
+      final response = await http.post(
+        Uri.parse('${AppConstants.baseUrl}/user'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'name': fullName.text,
+          'mobile': phone.text,
+          'nid': nid.text,
+          'email': email.text,
+          'password': password.text,
+          'is_student': false, // Default for now
+          'balance': 200.0, // Default balance
+        }),
+      );
 
-    isLoading = false;
-    notifyListeners();
+      if (response.statusCode == 200) {
+        isLoading = false;
+        notifyListeners();
+        return true;
+      } else {
+        isLoading = false;
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      isLoading = false;
+      notifyListeners();
+      return false;
+    }
   }
 
   bool isSignupValid() {
