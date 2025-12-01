@@ -13,6 +13,9 @@ class AuthProvider extends ChangeNotifier {
   final phone = TextEditingController();
   final password = TextEditingController();
 
+  // NEW: separate controller for confirm password
+  final confirmPassword = TextEditingController();
+
   bool agreed = false;
 
   void toggleAgreement(bool? value) {
@@ -56,15 +59,22 @@ class AuthProvider extends ChangeNotifier {
     isLoading = true;
     notifyListeners();
 
+    // Basic guard: passwords must match before hitting API
+    if (password.text.trim() != confirmPassword.text.trim()) {
+      isLoading = false;
+      notifyListeners();
+      return false;
+    }
+
     try {
       final response = await http.post(
         Uri.parse('${AppConstants.baseUrl}/user'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
-          'name': fullName.text,
-          'mobile': phone.text,
-          'nid': nid.text,
-          'email': email.text,
+          'name': fullName.text.trim(),
+          'mobile': phone.text.trim(),
+          'nid': nid.text.trim(),
+          'email': email.text.trim(),
           'password': password.text,
           'is_student': false, // Default for now
           'balance': 200.0, // Default balance
@@ -88,11 +98,24 @@ class AuthProvider extends ChangeNotifier {
   }
 
   bool isSignupValid() {
-    return fullName.text.isNotEmpty &&
-        email.text.isNotEmpty &&
-        nid.text.isNotEmpty &&
-        phone.text.isNotEmpty &&
+    return fullName.text.trim().isNotEmpty &&
+        email.text.trim().isNotEmpty &&
+        nid.text.trim().isNotEmpty &&
+        phone.text.trim().isNotEmpty &&
         password.text.length >= 6 &&
+        confirmPassword.text.length >= 6 &&
+        password.text == confirmPassword.text &&
         agreed == true;
+  }
+
+  @override
+  void dispose() {
+    fullName.dispose();
+    email.dispose();
+    nid.dispose();
+    phone.dispose();
+    password.dispose();
+    confirmPassword.dispose();
+    super.dispose();
   }
 }
