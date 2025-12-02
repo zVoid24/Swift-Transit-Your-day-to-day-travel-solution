@@ -13,6 +13,7 @@ import (
 type RouteRepo interface {
 	route.RouteRepo
 	FindRoute(start, end string) (*domain.Route, error)
+	SearchStops(query string) ([]string, error)
 }
 
 type routeRepo struct {
@@ -141,4 +142,14 @@ func (r *routeRepo) FindRoute(start, end string) (*domain.Route, error) {
 	route.Stops = stops
 
 	return &route, nil
+}
+
+func (r *routeRepo) SearchStops(query string) ([]string, error) {
+	var stops []string
+	sql := `SELECT DISTINCT name FROM stops WHERE name ILIKE $1 LIMIT 10`
+	err := r.dbCon.Select(&stops, sql, "%"+query+"%")
+	if err != nil {
+		return nil, err
+	}
+	return stops, nil
 }

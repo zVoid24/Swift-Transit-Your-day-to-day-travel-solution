@@ -7,4 +7,5 @@ type Service interface {
 	FindByID(id int64) (*domain.Route, error)
 	Create(route domain.Route) (*domain.Route, error)
 	FindRoute(start, end string) (*domain.Route, error)
+	SearchStops(query string) ([]string, error)
 }

@@ -29,3 +29,7 @@ func (svc *service) FindByID(id int64) (*domain.Route, error) {
 func (svc *service) FindRoute(start, end string) (*domain.Route, error) {
 	return svc.repo.FindRoute(start, end)
 }
+
+func (svc *service) SearchStops(query string) ([]string, error) {
+	return svc.repo.SearchStops(query)
+}

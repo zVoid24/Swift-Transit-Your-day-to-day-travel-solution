@@ -23,6 +23,9 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Map<String, dynamic>? _user;
+  Map<String, dynamic>? get user => _user;
+
   Future<bool> login(String mobile, String password) async {
     isLoading = true;
     notifyListeners();
@@ -39,6 +42,7 @@ class AuthProvider extends ChangeNotifier {
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('jwt', data['jwt']);
         await prefs.setString('user', jsonEncode(data['user']));
+        _user = data['user'];
 
         isLoading = false;
         notifyListeners();
@@ -55,7 +59,7 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  Future<bool> signup() async {
+  Future<bool> initiateSignup() async {
     isLoading = true;
     notifyListeners();
 
@@ -95,6 +99,49 @@ class AuthProvider extends ChangeNotifier {
       notifyListeners();
       return false;
     }
+  }
+
+  Future<bool> verifySignup(String email, String otp) async {
+    isLoading = true;
+    notifyListeners();
+
+    try {
+      final response = await http.post(
+        Uri.parse('${AppConstants.baseUrl}/user/verify'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'email': email, 'otp': otp}),
+      );
+
+      if (response.statusCode == 200) {
+        isLoading = false;
+        notifyListeners();
+        return true;
+      } else {
+        isLoading = false;
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> resendOtp() async {
+    // Re-use initiateSignup to resend OTP as it sends the same data
+    return await initiateSignup();
+  }
+
+  void clearSignupFields() {
+    fullName.clear();
+    email.clear();
+    nid.clear();
+    phone.clear();
+    password.clear();
+    confirmPassword.clear();
+    agreed = false;
+    notifyListeners();
   }
 
   bool isSignupValid() {

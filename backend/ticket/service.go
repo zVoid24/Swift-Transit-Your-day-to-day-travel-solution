@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+	"swift_transit/domain"
 	"swift_transit/infra/payment"
 	"swift_transit/infra/rabbitmq"
 	"swift_transit/user"
@@ -222,4 +223,8 @@ func (s *service) DownloadTicket(id int64) ([]byte, error) {
 	}
 
 	return buf.Bytes(), nil
+}
+
+func (s *service) GetByUserID(userId int64) ([]domain.Ticket, error) {
+	return s.repo.GetByUserID(userId)
 }

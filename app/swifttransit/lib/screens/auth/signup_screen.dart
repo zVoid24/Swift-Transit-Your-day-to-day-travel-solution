@@ -10,6 +10,7 @@ import '../../../providers/auth_provider.dart';
 import '../../widgets/input_field.dart';
 import '../../widgets/primary_button.dart';
 import 'login_screen.dart';
+import 'otp_verification_screen.dart';
 
 class _CachedLottie extends StatefulWidget {
   final String asset;
@@ -180,7 +181,10 @@ class _SignupScreenState extends State<SignupScreen> {
                     customPrefix: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Image.network("https://flagcdn.com/w40/bd.png", width: 20),
+                        Image.network(
+                          "https://flagcdn.com/w40/bd.png",
+                          width: 20,
+                        ),
                         const SizedBox(width: 6),
                       ],
                     ),
@@ -201,7 +205,6 @@ class _SignupScreenState extends State<SignupScreen> {
                   ),
 
                   //const SizedBox(height: 2),
-
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
@@ -257,11 +260,25 @@ class _SignupScreenState extends State<SignupScreen> {
                           return;
                         }
 
-                        final ok = await ap.signup();
+                        final ok = await ap.initiateSignup();
                         if (ok) {
-                          AppSnackBar.success(context, "Account created successfully!");
+                          AppSnackBar.success(
+                            context,
+                            "OTP sent to your email!",
+                          );
+                          if (!context.mounted) return;
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  OtpVerificationScreen(email: ap.email.text),
+                            ),
+                          );
                         } else {
-                          AppSnackBar.error(context, "Failed to create account. Try again.");
+                          AppSnackBar.error(
+                            context,
+                            "Failed to initiate signup. Try again.",
+                          );
                         }
                       },
                     ),
@@ -270,37 +287,40 @@ class _SignupScreenState extends State<SignupScreen> {
                   const SizedBox(height: 20),
 
                   Row(
-  mainAxisAlignment: MainAxisAlignment.center,
-  children: [
-    Text(
-      "Already have an account? ",   // ← added space here
-      style: GoogleFonts.poppins(color: Colors.black),
-    ),
-    TextButton(
-      style: TextButton.styleFrom(
-        padding: EdgeInsets.zero,                     // removes all default padding
-        minimumSize: Size.zero,                       // allows button to shrink to text size
-        tapTargetSize: MaterialTapTargetSize.shrinkWrap, // removes extra tap padding
-      ),
-      onPressed: () {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) => const LoginScreen(),
-          ),
-        );
-      },
-      child: Text(
-        "Login",
-        style: GoogleFonts.poppins(
-          color: AppColors.primary,
-          fontWeight: FontWeight.bold,
-          decoration: TextDecoration.underline,
-        ),
-      ),
-    ),
-  ],
-),
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        "Already have an account? ", // ← added space here
+                        style: GoogleFonts.poppins(color: Colors.black),
+                      ),
+                      TextButton(
+                        style: TextButton.styleFrom(
+                          padding:
+                              EdgeInsets.zero, // removes all default padding
+                          minimumSize:
+                              Size.zero, // allows button to shrink to text size
+                          tapTargetSize: MaterialTapTargetSize
+                              .shrinkWrap, // removes extra tap padding
+                        ),
+                        onPressed: () {
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const LoginScreen(),
+                            ),
+                          );
+                        },
+                        child: Text(
+                          "Login",
+                          style: GoogleFonts.poppins(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.bold,
+                            decoration: TextDecoration.underline,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),

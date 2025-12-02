@@ -136,30 +136,62 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: 60),
 
               SizedBox(
-  width: double.infinity,
-  height: 54,
-  child: ElevatedButton(
-    style: ElevatedButton.styleFrom(
-      backgroundColor: AppColors.primary,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
-      ),
-    ),
-    onPressed: () {
-      Navigator.pushReplacementNamed(context, '/dashboard');
-    },
+                width: double.infinity,
+                height: 54,
+                child: Consumer<AuthProvider>(
+                  builder: (context, auth, _) => ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    onPressed: auth.isLoading
+                        ? null
+                        : () async {
+                            if (phoneController.text.isEmpty ||
+                                passwordController.text.isEmpty) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text("Please fill all fields"),
+                                ),
+                              );
+                              return;
+                            }
 
-    child: Text(
-      "Log In",
-      style: GoogleFonts.poppins(
-        color: Colors.white,
-        fontWeight: FontWeight.bold,
-        fontSize: 16,
-      ),
-    ),
-  ),
-),
+                            final success = await auth.login(
+                              phoneController.text.trim(),
+                              passwordController.text,
+                            );
 
+                            if (success) {
+                              if (!context.mounted) return;
+                              Navigator.pushReplacementNamed(
+                                context,
+                                '/dashboard',
+                              );
+                            } else {
+                              if (!context.mounted) return;
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text("Invalid credentials"),
+                                ),
+                              );
+                            }
+                          },
+                    child: auth.isLoading
+                        ? const CircularProgressIndicator(color: Colors.white)
+                        : Text(
+                            "Log In",
+                            style: GoogleFonts.poppins(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                  ),
+                ),
+              ),
 
               const SizedBox(height: 20),
 

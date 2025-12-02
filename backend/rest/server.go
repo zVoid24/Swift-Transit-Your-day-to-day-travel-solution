@@ -21,6 +21,6 @@ func (h *Handler) Serve() {
 	port := ":" + h.cnf.HttpPort
 	err := http.ListenAndServe(port, wrappedMux)
 	if err != nil {
-		log.Fatal("Error starting server")
+		log.Fatal("Error starting server: ", err)
 	}
 }

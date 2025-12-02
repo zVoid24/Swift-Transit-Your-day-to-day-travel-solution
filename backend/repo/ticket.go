@@ -10,6 +10,7 @@ import (
 
 type TicketRepo interface {
 	ticket.TicketRepo
+	GetByUserID(userId int64) ([]domain.Ticket, error)
 }
 
 type ticketRepo struct {
@@ -83,4 +84,14 @@ func (r *ticketRepo) CalculateFare(routeId int64, start, end string) (float64, e
 		return 0, err
 	}
 	return fare, nil
+}
+
+func (r *ticketRepo) GetByUserID(userId int64) ([]domain.Ticket, error) {
+	var tickets []domain.Ticket
+	query := `SELECT * FROM tickets WHERE user_id = $1 ORDER BY created_at DESC`
+	err := r.dbCon.Select(&tickets, query, userId)
+	if err != nil {
+		return nil, err
+	}
+	return tickets, nil
 }

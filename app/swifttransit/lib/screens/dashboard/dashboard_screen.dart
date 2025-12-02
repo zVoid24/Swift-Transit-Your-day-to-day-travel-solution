@@ -8,11 +8,27 @@ import '../../../core/colors.dart';
 import '../../providers/dashboard_provider.dart';
 import '../profile/profile_screen.dart';
 import '../search/search_screen.dart';
+import '../ticket/buy_ticket_screen.dart';
 
 const double _kCorner = 16.0;
 
-class DashboardScreen extends StatelessWidget {
+class DashboardScreen extends StatefulWidget {
   const DashboardScreen({Key? key}) : super(key: key);
+
+  @override
+  State<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends State<DashboardScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final provider = Provider.of<DashboardProvider>(context, listen: false);
+      provider.fetchUserInfo();
+      provider.fetchTickets();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -22,18 +38,8 @@ class DashboardScreen extends StatelessWidget {
         child: Stack(
           children: [
             _DashboardContent(),
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 72,
-              child: _FixedAdBar(),
-            ),
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: _AppBottomNav(),
-            ),
+            Positioned(left: 0, right: 0, bottom: 72, child: _FixedAdBar()),
+            Positioned(left: 0, right: 0, bottom: 0, child: _AppBottomNav()),
           ],
         ),
       ),
@@ -81,7 +87,9 @@ class _DashboardContent extends StatelessWidget {
             const SizedBox(height: 20),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: _PreviousTripsSection(hasPrevious: false), // static: no previous trips
+              child: _PreviousTripsSection(
+                hasPrevious: false,
+              ), // static: no previous trips
             ),
             const SizedBox(height: 24),
           ],
@@ -111,7 +119,11 @@ class _TopHeader extends StatelessWidget {
                 borderRadius: BorderRadius.circular(14),
               ),
               child: Center(
-                child: Icon(Icons.directions_bus, color: AppColors.primary, size: 28),
+                child: Icon(
+                  Icons.directions_bus,
+                  color: AppColors.primary,
+                  size: 28,
+                ),
               ),
             ),
             const SizedBox(width: 12),
@@ -153,13 +165,16 @@ class _TopHeader extends StatelessWidget {
                   ),
                 ],
               ),
-              child: const Icon(Icons.notifications_none, color: Colors.black54),
+              child: const Icon(
+                Icons.notifications_none,
+                color: Colors.black54,
+              ),
             ),
           ],
         ),
         const SizedBox(height: 12),
+
         // Greeting line below
-        
       ],
     );
   }
@@ -173,7 +188,10 @@ class _BalanceCard extends StatelessWidget {
   }
 
   Future<void> _handleRefresh(BuildContext context) async {
-    final dashboardProvider = Provider.of<DashboardProvider>(context, listen: false);
+    final dashboardProvider = Provider.of<DashboardProvider>(
+      context,
+      listen: false,
+    );
     try {
       final result = await dashboardProvider.refreshBalance();
       if (result == null || result == true) {
@@ -196,7 +214,11 @@ class _BalanceCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(_kCorner),
         boxShadow: [
           // minimal subtle shadow
-          BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 12, offset: Offset(0, 6)),
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 12,
+            offset: Offset(0, 6),
+          ),
         ],
       ),
       child: Column(
@@ -211,13 +233,27 @@ class _BalanceCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Balance', style: TextStyle(color: Colors.black54, fontSize: 13)),
+                    Text(
+                      'Balance',
+                      style: TextStyle(color: Colors.black54, fontSize: 13),
+                    ),
                     const SizedBox(height: 6),
                     Row(
                       children: [
-                        Text('BDT', style: TextStyle(color: Colors.black54, fontSize: 14)),
+                        Text(
+                          'BDT',
+                          style: TextStyle(color: Colors.black54, fontSize: 14),
+                        ),
                         const SizedBox(width: 8),
-                        Text('0', style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold)),
+                        Consumer<DashboardProvider>(
+                          builder: (context, provider, _) => Text(
+                            '${provider.balance}',
+                            style: const TextStyle(
+                              fontSize: 26,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
                       ],
                     ),
                   ],
@@ -230,12 +266,27 @@ class _BalanceCard extends StatelessWidget {
                   // simulate recharge flow
                   _showSnack(context, 'Recharge tapped (static)');
                 },
-                icon: Icon(Icons.account_balance_wallet_rounded, size: 18, color: Colors.white),
-                label: Text('Recharge', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.white)),
+                icon: Icon(
+                  Icons.account_balance_wallet_rounded,
+                  size: 18,
+                  color: Colors.white,
+                ),
+                label: Text(
+                  'Recharge',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                   elevation: 0,
                 ),
               ),
@@ -254,7 +305,11 @@ class _BalanceCard extends StatelessWidget {
                     color: AppColors.primary.withOpacity(0.12),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Icon(Icons.refresh, color: AppColors.primary, size: 20),
+                  child: Icon(
+                    Icons.refresh,
+                    color: AppColors.primary,
+                    size: 20,
+                  ),
                 ),
               ),
             ],
@@ -284,16 +339,26 @@ class _BalanceCard extends StatelessWidget {
                       color: AppColors.primary.withOpacity(0.08),
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: Icon(Icons.star_rounded, color: AppColors.primary, size: 18),
+                    child: Icon(
+                      Icons.star_rounded,
+                      color: AppColors.primary,
+                      size: 18,
+                    ),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: const [
-                        Text('Swift Points', style: TextStyle(color: Colors.black54, fontSize: 13)),
+                        Text(
+                          'Swift Points',
+                          style: TextStyle(color: Colors.black54, fontSize: 13),
+                        ),
                         SizedBox(height: 2),
-                        Text('0', style: TextStyle(fontWeight: FontWeight.w700)),
+                        Text(
+                          '0',
+                          style: TextStyle(fontWeight: FontWeight.w700),
+                        ),
                       ],
                     ),
                   ),
@@ -301,9 +366,19 @@ class _BalanceCard extends StatelessWidget {
                   // arrow indicator
                   Row(
                     children: [
-                      Text('Use Swift Points', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600)),
+                      Text(
+                        'Use Swift Points',
+                        style: TextStyle(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                       const SizedBox(width: 8),
-                      Icon(Icons.arrow_forward_ios, size: 14, color: Colors.black26),
+                      Icon(
+                        Icons.arrow_forward_ios,
+                        size: 14,
+                        color: Colors.black26,
+                      ),
                     ],
                   ),
                 ],
@@ -321,32 +396,44 @@ class _ProfileUpdateCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-
-    );
+    return Container();
   }
 }
 
 class _ServiceSelector extends StatelessWidget {
   const _ServiceSelector({Key? key}) : super(key: key);
 
-  Widget _tile(String label, IconData icon) {
+  Widget _tile(
+    BuildContext context,
+    String label,
+    IconData icon,
+    VoidCallback onTap,
+  ) {
     return Expanded(
-      child: Container(
-        height: 88,
-        margin: const EdgeInsets.symmetric(horizontal: 6),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, 6))],
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 36, color: AppColors.primary),
-            const SizedBox(height: 8),
-            Text(label, style: TextStyle(fontWeight: FontWeight.w600)),
-          ],
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          height: 88,
+          margin: const EdgeInsets.symmetric(horizontal: 6),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black12,
+                blurRadius: 8,
+                offset: Offset(0, 6),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 36, color: AppColors.primary),
+              const SizedBox(height: 8),
+              Text(label, style: TextStyle(fontWeight: FontWeight.w600)),
+            ],
+          ),
         ),
       ),
     );
@@ -356,8 +443,13 @@ class _ServiceSelector extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        _tile('Buy Ticket', Icons.confirmation_number),
-        _tile('Track Bus', Icons.track_changes),
+        _tile(context, 'Buy Ticket', Icons.confirmation_number, () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const BuyTicketScreen()),
+          );
+        }),
+        _tile(context, 'Track Bus', Icons.track_changes, () {}),
       ],
     );
   }
@@ -382,18 +474,26 @@ class _MyTicketCardState extends State<_MyTicketCard> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(_kCorner),
-        boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 10, offset: Offset(0, 6))],
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black12,
+            blurRadius: 10,
+            offset: Offset(0, 6),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Expanded(child: Text('My Ticket', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16))),
-              TextButton(
-                onPressed: () {},
-                child: const Text('See All'),
+              const Expanded(
+                child: Text(
+                  'My Ticket',
+                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+                ),
               ),
+              TextButton(onPressed: () {}, child: const Text('See All')),
             ],
           ),
           const SizedBox(height: 8),
@@ -415,12 +515,19 @@ class _MyTicketCardState extends State<_MyTicketCard> {
                       decoration: BoxDecoration(
                         color: selected ? Colors.white : Colors.transparent,
                         borderRadius: BorderRadius.circular(10),
-                        border: selected ? Border.all(color: Colors.grey.shade200) : null,
+                        border: selected
+                            ? Border.all(color: Colors.grey.shade200)
+                            : null,
                       ),
                       child: Center(
                         child: Text(
                           tabs[i],
-                          style: TextStyle(fontWeight: selected ? FontWeight.w700 : FontWeight.w500, fontSize: 13),
+                          style: TextStyle(
+                            fontWeight: selected
+                                ? FontWeight.w700
+                                : FontWeight.w500,
+                            fontSize: 13,
+                          ),
                         ),
                       ),
                     ),
@@ -430,30 +537,65 @@ class _MyTicketCardState extends State<_MyTicketCard> {
             ),
           ),
           const SizedBox(height: 12),
-          if (_selected == 0) ..._sampleTicketsAll(),
-          if (_selected == 1) ..._sampleTicketsPrevious(),
-          if (_selected == 2) ..._sampleTicketsCancelled(),
+          Consumer<DashboardProvider>(
+            builder: (context, provider, _) {
+              if (_selected == 0)
+                return Column(children: _sampleTicketsAll(provider));
+              if (_selected == 1)
+                return Column(children: _sampleTicketsPrevious());
+              if (_selected == 2)
+                return Column(children: _sampleTicketsCancelled());
+              return const SizedBox();
+            },
+          ),
         ],
       ),
     );
   }
 
-  List<Widget> _sampleTicketsAll() => [
-        const SizedBox(height: 12),
-        _TicketRow(title: 'Dhaka → Chittagong', subtitle: '25 Nov • 09:00 AM', status: 'Upcoming'),
-        const SizedBox(height: 8),
-        _TicketRow(title: 'Sylhet → Dhaka', subtitle: '10 Nov • 02:30 PM', status: 'Completed'),
+  List<Widget> _sampleTicketsAll(DashboardProvider provider) {
+    if (provider.isLoadingTickets) {
+      return [const Center(child: CircularProgressIndicator())];
+    }
+    if (provider.tickets.isEmpty) {
+      return [
+        const Padding(
+          padding: EdgeInsets.all(8),
+          child: Text("No tickets found"),
+        ),
       ];
+    }
+    return provider.tickets.map((t) {
+      return Column(
+        children: [
+          const SizedBox(height: 8),
+          _TicketRow(
+            title: '${t['start_destination']} → ${t['end_destination']}',
+            subtitle: '${t['created_at']} • ৳${t['fare']}',
+            status: t['paid_status'] ? 'Paid' : 'Unpaid',
+          ),
+        ],
+      );
+    }).toList();
+  }
 
   List<Widget> _sampleTicketsPrevious() => [
-        const SizedBox(height: 12),
-        _TicketRow(title: 'Sylhet → Dhaka', subtitle: '10 Nov • 02:30 PM', status: 'Completed'),
-      ];
+    const SizedBox(height: 12),
+    _TicketRow(
+      title: 'Sylhet → Dhaka',
+      subtitle: '10 Nov • 02:30 PM',
+      status: 'Completed',
+    ),
+  ];
 
   List<Widget> _sampleTicketsCancelled() => [
-        const SizedBox(height: 12),
-        _TicketRow(title: 'Comilla → Dhaka', subtitle: '01 Oct • 08:00 AM', status: 'Cancelled'),
-      ];
+    const SizedBox(height: 12),
+    _TicketRow(
+      title: 'Comilla → Dhaka',
+      subtitle: '01 Oct • 08:00 AM',
+      status: 'Cancelled',
+    ),
+  ];
 }
 
 class _TicketRow extends StatelessWidget {
@@ -461,7 +603,12 @@ class _TicketRow extends StatelessWidget {
   final String subtitle;
   final String status;
 
-  const _TicketRow({required this.title, required this.subtitle, required this.status, Key? key}) : super(key: key);
+  const _TicketRow({
+    required this.title,
+    required this.subtitle,
+    required this.status,
+    Key? key,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -491,21 +638,40 @@ class _TicketRow extends StatelessWidget {
           Container(
             width: 44,
             height: 44,
-            decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.12), borderRadius: BorderRadius.circular(10)),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(10),
+            ),
             child: Icon(Icons.airport_shuttle, color: AppColors.primary),
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(title, style: TextStyle(fontWeight: FontWeight.w700)),
-              SizedBox(height: 4),
-              Text(subtitle, style: TextStyle(color: Colors.black54, fontSize: 12)),
-            ]),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: TextStyle(fontWeight: FontWeight.w700)),
+                SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: TextStyle(color: Colors.black54, fontSize: 12),
+                ),
+              ],
+            ),
           ),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(color: pillColor.withOpacity(0.12), borderRadius: BorderRadius.circular(20)),
-            child: Text(status, style: TextStyle(color: pillColor, fontWeight: FontWeight.w700, fontSize: 12)),
+            decoration: BoxDecoration(
+              color: pillColor.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              status,
+              style: TextStyle(
+                color: pillColor,
+                fontWeight: FontWeight.w700,
+                fontSize: 12,
+              ),
+            ),
           ),
         ],
       ),
@@ -515,21 +681,31 @@ class _TicketRow extends StatelessWidget {
 
 class _PreviousTripsSection extends StatelessWidget {
   final bool hasPrevious;
-  const _PreviousTripsSection({Key? key, required this.hasPrevious}) : super(key: key);
+  const _PreviousTripsSection({Key? key, required this.hasPrevious})
+    : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Previous Trips', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+        const Text(
+          'Previous Trips',
+          style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+        ),
         const SizedBox(height: 12),
         if (hasPrevious)
-          Column(children: [
-            _TripCard(from: 'Dhaka', to: 'Sylhet', time: '08:00 AM • 12 Oct'),
-            const SizedBox(height: 8),
-            _TripCard(from: 'Dhaka', to: 'Comilla', time: '02:00 PM • 05 Sep'),
-          ])
+          Column(
+            children: [
+              _TripCard(from: 'Dhaka', to: 'Sylhet', time: '08:00 AM • 12 Oct'),
+              const SizedBox(height: 8),
+              _TripCard(
+                from: 'Dhaka',
+                to: 'Comilla',
+                time: '02:00 PM • 05 Sep',
+              ),
+            ],
+          )
         else
           _SuggestedTrip(),
       ],
@@ -542,19 +718,56 @@ class _TripCard extends StatelessWidget {
   final String to;
   final String time;
 
-  const _TripCard({required this.from, required this.to, required this.time, Key? key}) : super(key: key);
+  const _TripCard({
+    required this.from,
+    required this.to,
+    required this.time,
+    Key? key,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, 6))]),
-      child: Row(children: [
-        Icon(Icons.place, color: AppColors.primary),
-        const SizedBox(width: 12),
-        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('$from → $to', style: TextStyle(fontWeight: FontWeight.w700)), SizedBox(height: 4), Text(time, style: TextStyle(color: Colors.black54, fontSize: 12))])),
-        ElevatedButton(onPressed: () {}, style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))), child: const Text('Rebook'))
-      ]),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, 6)),
+        ],
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.place, color: AppColors.primary),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '$from → $to',
+                  style: TextStyle(fontWeight: FontWeight.w700),
+                ),
+                SizedBox(height: 4),
+                Text(
+                  time,
+                  style: TextStyle(color: Colors.black54, fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () {},
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            child: const Text('Rebook'),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -566,13 +779,45 @@ class _SuggestedTrip extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, 6))]),
-      child: Row(children: [
-        Icon(Icons.lightbulb, color: AppColors.primary),
-        const SizedBox(width: 12),
-        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Suggested Trip', style: TextStyle(fontWeight: FontWeight.w700)), SizedBox(height: 4), Text('Dhaka → Chittagong • 09:00 AM — 12:30 PM', style: TextStyle(color: Colors.black54, fontSize: 12))])),
-        ElevatedButton(onPressed: () {}, style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))), child: const Text('Book'))
-      ]),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, 6)),
+        ],
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.lightbulb, color: AppColors.primary),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Suggested Trip',
+                  style: TextStyle(fontWeight: FontWeight.w700),
+                ),
+                SizedBox(height: 4),
+                Text(
+                  'Dhaka → Chittagong • 09:00 AM — 12:30 PM',
+                  style: TextStyle(color: Colors.black54, fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () {},
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            child: const Text('Book'),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -587,17 +832,39 @@ class _FixedAdBar extends StatelessWidget {
       child: Container(
         height: 56,
         decoration: BoxDecoration(
-          gradient: LinearGradient(colors: [AppColors.primary.withOpacity(0.95), AppColors.primary.withOpacity(0.8)]),
+          gradient: LinearGradient(
+            colors: [
+              AppColors.primary.withOpacity(0.95),
+              AppColors.primary.withOpacity(0.8),
+            ],
+          ),
           borderRadius: BorderRadius.circular(12),
-          boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, 4))],
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black12,
+              blurRadius: 8,
+              offset: Offset(0, 4),
+            ),
+          ],
         ),
         child: Row(
           children: [
             const SizedBox(width: 12),
             Icon(Icons.local_offer, color: Colors.white),
             const SizedBox(width: 12),
-            Expanded(child: Text('Sponsored — 20% off intercity trips', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600))),
-            TextButton(onPressed: () {}, child: Text('Learn', style: TextStyle(color: Colors.white))),
+            Expanded(
+              child: Text(
+                'Sponsored — 20% off intercity trips',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            TextButton(
+              onPressed: () {},
+              child: Text('Learn', style: TextStyle(color: Colors.white)),
+            ),
             const SizedBox(width: 8),
           ],
         ),
@@ -625,7 +892,11 @@ class _AppBottomNav extends StatelessWidget {
               children: [
                 _NavItem(icon: Icons.home, label: 'Home', active: true),
                 _NavItem(icon: Icons.search, label: 'Search', active: false),
-                _NavItem(icon: Icons.confirmation_num, label: 'My Ticket', active: false),
+                _NavItem(
+                  icon: Icons.confirmation_num,
+                  label: 'My Ticket',
+                  active: false,
+                ),
                 _NavItem(icon: Icons.person, label: 'Account', active: false),
               ],
             ),
@@ -640,7 +911,12 @@ class _NavItem extends StatelessWidget {
   final IconData icon;
   final String label;
   final bool active;
-  const _NavItem({required this.icon, required this.label, required this.active, Key? key}) : super(key: key);
+  const _NavItem({
+    required this.icon,
+    required this.label,
+    required this.active,
+    Key? key,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -649,7 +925,13 @@ class _NavItem extends StatelessWidget {
       children: [
         Icon(icon, color: active ? AppColors.primary : Colors.grey.shade400),
         const SizedBox(height: 4),
-        Text(label, style: TextStyle(color: active ? AppColors.primary : Colors.grey.shade400, fontSize: 12)),
+        Text(
+          label,
+          style: TextStyle(
+            color: active ? AppColors.primary : Colors.grey.shade400,
+            fontSize: 12,
+          ),
+        ),
       ],
     );
   }

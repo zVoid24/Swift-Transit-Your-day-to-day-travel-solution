@@ -9,10 +9,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../core/constants.dart';
 
 class DashboardProvider extends ChangeNotifier {
-  DashboardProvider({
-    this.initialBalance = 0.0,
-    this.initialPoints = 0,
-  }) {
+  DashboardProvider({this.initialBalance = 0.0, this.initialPoints = 0}) {
     balance = initialBalance;
     swiftPoints = initialPoints;
   }
@@ -36,6 +33,9 @@ class DashboardProvider extends ChangeNotifier {
   List<LatLng> routePoints = [];
   List<Marker> markers = [];
   int? currentRouteId;
+
+  List<dynamic> tickets = [];
+  bool isLoadingTickets = false;
 
   // flags
   bool _isRefreshing = false;
@@ -89,7 +89,7 @@ class DashboardProvider extends ChangeNotifier {
 
     try {
       final response = await http.get(
-        Uri.parse('${AppConstants.baseUrl}/user/info'),
+        Uri.parse('${AppConstants.baseUrl}/user'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $jwt',
@@ -104,16 +104,18 @@ class DashboardProvider extends ChangeNotifier {
           balance = (data['balance'] as num).toDouble();
         }
         // If API returns points, use it
-        if (data['swift_points'] != null) {
+        if (data['balance'] != null) {
           try {
-            swiftPoints = (data['swift_points'] as num).toInt();
+            swiftPoints = (data['balance'] as num).toInt();
           } catch (_) {}
         }
 
         notifyListeners();
       } else {
         // non-200: do not overwrite fields, but log optionally
-        debugPrint('fetchUserInfo failed: ${response.statusCode} ${response.body}');
+        debugPrint(
+          'fetchUserInfo failed: ${response.statusCode} ${response.body}',
+        );
       }
     } catch (e) {
       debugPrint("Error fetching user info: $e");
@@ -281,9 +283,7 @@ class DashboardProvider extends ChangeNotifier {
     final userStr = prefs.getString('user');
     if (jwt == null || userStr == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Please log in again to buy a ticket."),
-        ),
+        const SnackBar(content: Text("Please log in again to buy a ticket.")),
       );
       return;
     }
@@ -396,5 +396,68 @@ class DashboardProvider extends ChangeNotifier {
   void setSwiftPoints(int pts) {
     swiftPoints = pts;
     notifyListeners();
+  }
+
+  Future<void> fetchTickets() async {
+    isLoadingTickets = true;
+    notifyListeners();
+
+    final prefs = await SharedPreferences.getInstance();
+    final jwt = prefs.getString('jwt');
+    if (jwt == null) {
+      isLoadingTickets = false;
+      notifyListeners();
+      return;
+    }
+
+    try {
+      final response = await http.get(
+        Uri.parse('${AppConstants.baseUrl}/ticket'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $jwt',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        tickets = data != null ? List.from(data) : [];
+      } else {
+        debugPrint("Failed to fetch tickets: ${response.statusCode}");
+      }
+    } catch (e) {
+      debugPrint("Error fetching tickets: $e");
+    } finally {
+      isLoadingTickets = false;
+      notifyListeners();
+    }
+  }
+
+  Future<List<String>> searchStops(String query) async {
+    if (query.isEmpty) return [];
+
+    final prefs = await SharedPreferences.getInstance();
+    final jwt = prefs.getString('jwt'); // Optional if search is public
+
+    try {
+      final uri = Uri.parse(
+        '${AppConstants.baseUrl}/route/stops',
+      ).replace(queryParameters: {'q': query});
+      final response = await http.get(
+        uri,
+        headers: {
+          'Content-Type': 'application/json',
+          if (jwt != null) 'Authorization': 'Bearer $jwt',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(response.body);
+        return data.map((e) => e.toString()).toList();
+      }
+    } catch (e) {
+      debugPrint("Error searching stops: $e");
+    }
+    return [];
   }
 }
