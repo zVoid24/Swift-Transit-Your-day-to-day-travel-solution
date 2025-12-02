@@ -1,7 +1,6 @@
 package user
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -53,15 +52,14 @@ func (h *Handler) InitiateSignup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx := context.Background()
 	// Store OTP
-	err = h.redisClient.Set(ctx, "signup_otp:"+req.Email, otp, 10*time.Minute).Err()
+	err = h.redisClient.Set(h.ctx, "signup_otp:"+req.Email, otp, 10*time.Minute).Err()
 	if err != nil {
 		h.utilHandler.SendError(w, map[string]string{"message": "Failed to store OTP"}, http.StatusInternalServerError)
 		return
 	}
 	// Store User Data
-	err = h.redisClient.Set(ctx, "signup_data:"+req.Email, userData, 10*time.Minute).Err()
+	err = h.redisClient.Set(h.ctx, "signup_data:"+req.Email, userData, 10*time.Minute).Err()
 	if err != nil {
 		h.utilHandler.SendError(w, map[string]string{"message": "Failed to store user data"}, http.StatusInternalServerError)
 		return
@@ -91,9 +89,8 @@ func (h *Handler) VerifySignup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx := context.Background()
 	// Verify OTP
-	storedOTP, err := h.redisClient.Get(ctx, "signup_otp:"+req.Email).Result()
+	storedOTP, err := h.redisClient.Get(h.ctx, "signup_otp:"+req.Email).Result()
 	if err != nil {
 		h.utilHandler.SendError(w, map[string]string{"message": "Invalid or expired OTP"}, http.StatusBadRequest)
 		return
@@ -105,7 +102,7 @@ func (h *Handler) VerifySignup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Retrieve User Data
-	storedUserData, err := h.redisClient.Get(ctx, "signup_data:"+req.Email).Result()
+	storedUserData, err := h.redisClient.Get(h.ctx, "signup_data:"+req.Email).Result()
 	if err != nil {
 		h.utilHandler.SendError(w, map[string]string{"message": "Session expired, please signup again"}, http.StatusBadRequest)
 		return
@@ -135,8 +132,8 @@ func (h *Handler) VerifySignup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Cleanup Redis
-	h.redisClient.Del(ctx, "signup_otp:"+req.Email)
-	h.redisClient.Del(ctx, "signup_data:"+req.Email)
+	h.redisClient.Del(h.ctx, "signup_otp:"+req.Email)
+	h.redisClient.Del(h.ctx, "signup_data:"+req.Email)
 
 	resp := map[string]interface{}{
 		"message":    "User created successfully",
