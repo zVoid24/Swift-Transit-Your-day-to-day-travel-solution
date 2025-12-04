@@ -20,6 +20,8 @@ class _BuyTicketScreenState extends State<BuyTicketScreen> {
   final TextEditingController _departureController = TextEditingController();
   final TextEditingController _destinationController = TextEditingController();
 
+  int _ticketQuantity = 1;
+
   List<String> _departureSuggestions = [];
   List<String> _destinationSuggestions = [];
   bool _showDepartureSuggestions = false;
@@ -515,8 +517,10 @@ class _BuyTicketScreenState extends State<BuyTicketScreen> {
     DashboardProvider provider,
   ) {
     final buses = provider.availableBuses;
-    final fareText = provider.currentFare != null
-        ? "৳${provider.currentFare!.toStringAsFixed(0)}"
+    final baseFare = provider.currentFare;
+    final totalFare = baseFare != null ? baseFare * _ticketQuantity : null;
+    final fareText = totalFare != null
+        ? "৳${totalFare.toStringAsFixed(0)} (x$_ticketQuantity)"
         : "৳--";
 
     return Column(
@@ -714,6 +718,63 @@ class _BuyTicketScreenState extends State<BuyTicketScreen> {
 
         const SizedBox(height: 12),
 
+        Card(
+          elevation: 2,
+          shadowColor: Colors.black12,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "Number of tickets",
+                  style: GoogleFonts.poppins(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    IconButton(
+                      onPressed: _ticketQuantity > 1
+                          ? () => setState(() => _ticketQuantity--)
+                          : null,
+                      icon: const Icon(Icons.remove_circle_outline),
+                    ),
+                    Text(
+                      '$_ticketQuantity',
+                      style: GoogleFonts.poppins(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: _ticketQuantity < 4
+                          ? () => setState(() => _ticketQuantity++)
+                          : null,
+                      icon: const Icon(Icons.add_circle_outline),
+                    ),
+                    const Spacer(),
+                    Text(
+                      'Max 4 per route',
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+
+        const SizedBox(height: 12),
+
         // Card 2: Pay Online
         Card(
           elevation: 2,
@@ -722,7 +783,11 @@ class _BuyTicketScreenState extends State<BuyTicketScreen> {
             borderRadius: BorderRadius.circular(16),
           ),
           child: InkWell(
-            onTap: () => provider.buyTicket(context, paymentMethod: "gateway"),
+            onTap: () => provider.buyTicket(
+              context,
+              paymentMethod: "gateway",
+              quantity: _ticketQuantity,
+            ),
             borderRadius: BorderRadius.circular(16),
             child: Padding(
               padding: const EdgeInsets.all(16),
@@ -777,6 +842,7 @@ class _BuyTicketScreenState extends State<BuyTicketScreen> {
               final success = await provider.buyTicket(
                 context,
                 paymentMethod: "wallet",
+                quantity: _ticketQuantity,
               );
 
               if (!context.mounted) return;

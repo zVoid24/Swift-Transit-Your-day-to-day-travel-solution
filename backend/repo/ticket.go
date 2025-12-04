@@ -1,6 +1,8 @@
 package repo
 
 import (
+	"time"
+
 	"swift_transit/domain"
 	"swift_transit/ticket"
 	"swift_transit/utils"
@@ -11,6 +13,9 @@ import (
 type TicketRepo interface {
 	ticket.TicketRepo
 	GetByUserID(userId int64, limit, offset int) ([]domain.Ticket, int, error)
+	CountActiveTicketsByRoute(userId int64, routeId int64) (int, error)
+	UpdateBatchPaymentStatus(batchID string, paid bool, status string, markUsed bool) error
+	CancelTicket(id int64, cancelledAt time.Time, status string) error
 }
 
 type ticketRepo struct {
@@ -27,10 +32,10 @@ func NewTicketRepo(dbcon *sqlx.DB, utilHandler *utils.Handler) TicketRepo {
 
 func (r *ticketRepo) Create(ticket domain.Ticket) (*domain.Ticket, error) {
 	query := `
-		INSERT INTO tickets (user_id, route_id, bus_name, start_destination, end_destination, fare, paid_status, qr_code, created_at)
-		VALUES (:user_id, :route_id, :bus_name, :start_destination, :end_destination, :fare, :paid_status, :qr_code, :created_at)
-		RETURNING id
-	`
+                INSERT INTO tickets (user_id, route_id, bus_name, start_destination, end_destination, fare, paid_status, checked, qr_code, created_at, batch_id, payment_method, payment_reference, payment_used, payment_status, cancelled_at)
+                VALUES (:user_id, :route_id, :bus_name, :start_destination, :end_destination, :fare, :paid_status, :checked, :qr_code, :created_at, :batch_id, :payment_method, :payment_reference, :payment_used, :payment_status, :cancelled_at)
+                RETURNING id
+        `
 	rows, err := r.dbCon.NamedQuery(query, ticket)
 	if err != nil {
 		return nil, err
@@ -48,7 +53,13 @@ func (r *ticketRepo) Create(ticket domain.Ticket) (*domain.Ticket, error) {
 }
 
 func (r *ticketRepo) UpdateStatus(id int64, status bool) error {
-	query := `UPDATE tickets SET paid_status = $1 WHERE id = $2`
+	query := `
+                UPDATE tickets
+                SET paid_status = $1,
+                    payment_status = CASE WHEN $1 THEN 'paid' ELSE payment_status END,
+                    payment_used = CASE WHEN $1 THEN TRUE ELSE payment_used END
+                WHERE batch_id = (SELECT batch_id FROM tickets WHERE id = $2)
+        `
 	_, err := r.dbCon.Exec(query, status, id)
 	return err
 }
@@ -101,6 +112,46 @@ func (r *ticketRepo) GetByUserID(userId int64, limit, offset int) ([]domain.Tick
 		return nil, 0, err
 	}
 	return tickets, total, nil
+}
+
+func (r *ticketRepo) CountActiveTicketsByRoute(userId int64, routeId int64) (int, error) {
+	var count int
+	query := `
+                SELECT COUNT(*)
+                FROM tickets
+                WHERE user_id = $1
+                  AND route_id = $2
+                  AND cancelled_at IS NULL
+                  AND checked = FALSE
+        `
+	if err := r.dbCon.Get(&count, query, userId, routeId); err != nil {
+		return 0, err
+	}
+	return count, nil
+}
+
+func (r *ticketRepo) UpdateBatchPaymentStatus(batchID string, paid bool, status string, markUsed bool) error {
+	query := `
+                UPDATE tickets
+                SET paid_status = $1,
+                    payment_status = $2,
+                    payment_used = CASE WHEN $3 THEN TRUE ELSE payment_used END,
+                    cancelled_at = CASE WHEN $1 = FALSE THEN COALESCE(cancelled_at, NOW()) ELSE cancelled_at END
+                WHERE batch_id = $4
+        `
+	_, err := r.dbCon.Exec(query, paid, status, markUsed, batchID)
+	return err
+}
+
+func (r *ticketRepo) CancelTicket(id int64, cancelledAt time.Time, status string) error {
+	query := `
+                UPDATE tickets
+                SET cancelled_at = $1,
+                    payment_status = $2
+                WHERE id = $3
+        `
+	_, err := r.dbCon.Exec(query, cancelledAt, status, id)
+	return err
 }
 
 func (r *ticketRepo) ValidateTicket(id int64) error {

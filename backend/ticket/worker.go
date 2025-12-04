@@ -92,26 +92,26 @@ func (w *TicketWorker) ProcessTicket(req TicketRequestMessage, trackingID string
 
 	baseURL := s.publicBaseURL
 
-	qrCode := uuid.New().String()
-	now := time.Now().Format(time.RFC3339)
-
-	ticket := domain.Ticket{
-		UserId:           req.UserId,
-		RouteId:          req.RouteId,
-		BusName:          req.BusName,
-		StartDestination: req.StartDestination,
-		EndDestination:   req.EndDestination,
-		Fare:             req.Fare,
-		QRCode:           qrCode,
-		CreatedAt:        now,
+	if req.Quantity == 0 {
+		req.Quantity = 1
 	}
 
+	batchID := req.BatchID
+	if batchID == "" {
+		batchID = uuid.New().String()
+	}
+
+	paymentRef := fmt.Sprintf("TICKET-%s", uuid.New().String()[:8])
+	now := time.Now().Format(time.RFC3339)
+	paymentStatus := "pending"
+	paidStatus := false
+	paymentUsed := false
+
 	if req.PaymentMethod == "wallet" {
-		// Deduct balance
-		err := s.userRepo.DeductBalance(req.UserId, req.Fare)
+		// Deduct balance for all tickets together
+		err := s.userRepo.DeductBalance(req.UserId, req.TotalFare)
 		if err != nil {
 			log.Printf("Payment failed: %v", err)
-			// Update status to failed
 			statusData := map[string]interface{}{
 				"status": "failed",
 				"error":  "Insufficient balance",
@@ -120,54 +120,63 @@ func (w *TicketWorker) ProcessTicket(req TicketRequestMessage, trackingID string
 			s.redis.Set(s.ctx, fmt.Sprintf("ticket_status:%s", trackingID), statusJSON, 1*time.Hour)
 			return
 		}
-		ticket.PaidStatus = true
-	} else {
-		ticket.PaidStatus = false
+		paidStatus = true
+		paymentStatus = "paid"
+		paymentUsed = true
 	}
 
-	// Create ticket in DB
-	createdTicket, err := s.repo.Create(ticket)
-	if err != nil {
-		log.Printf("Failed to create ticket: %v", err)
-		statusData := map[string]interface{}{
-			"status": "failed",
-			"error":  "Failed to create ticket",
+	var ticketIDs []int64
+	for i := 0; i < req.Quantity; i++ {
+		qrCode := uuid.New().String()
+		ticket := domain.Ticket{
+			UserId:           req.UserId,
+			RouteId:          req.RouteId,
+			BusName:          req.BusName,
+			StartDestination: req.StartDestination,
+			EndDestination:   req.EndDestination,
+			Fare:             req.Fare,
+			PaidStatus:       paidStatus,
+			Checked:          false,
+			QRCode:           qrCode,
+			CreatedAt:        now,
+			BatchID:          batchID,
+			PaymentMethod:    req.PaymentMethod,
+			PaymentReference: paymentRef,
+			PaymentStatus:    paymentStatus,
+			PaymentUsed:      paymentUsed,
 		}
-		statusJSON, _ := json.Marshal(statusData)
-		s.redis.Set(s.ctx, fmt.Sprintf("ticket_status:%s", trackingID), statusJSON, 1*time.Hour)
-		return
+
+		createdTicket, err := s.repo.Create(ticket)
+		if err != nil {
+			log.Printf("Failed to create ticket: %v", err)
+			statusData := map[string]interface{}{
+				"status": "failed",
+				"error":  "Failed to create ticket",
+			}
+			statusJSON, _ := json.Marshal(statusData)
+			s.redis.Set(s.ctx, fmt.Sprintf("ticket_status:%s", trackingID), statusJSON, 1*time.Hour)
+			return
+		}
+		ticketIDs = append(ticketIDs, createdTicket.Id)
 	}
 
 	if req.PaymentMethod == "wallet" {
-		// Store in Redis (valid for 5 hours)
-		ticketJSON, _ := json.Marshal(createdTicket)
-		key := fmt.Sprintf("ticket:%d", createdTicket.Id)
-		err = s.redis.Set(s.ctx, key, ticketJSON, 5*time.Hour).Err()
-		if err != nil {
-			log.Printf("Failed to cache ticket: %v", err)
-		}
-
-		// Update status to success (maybe return ticket ID or something)
-		// For wallet, there is no payment URL, so maybe we return a special URL or just "Success"
-		// The client expects a URL or "Ready".
-		// Let's store a success message or a dummy URL.
-		// Update status to success
 		statusData := map[string]interface{}{
-			"status":    "paid",
-			"url":       fmt.Sprintf("/ticket/download?id=%d", createdTicket.Id),
-			"ticket_id": createdTicket.Id,
+			"status":     "paid",
+			"url":        fmt.Sprintf("/ticket/download?id=%d", ticketIDs[0]),
+			"ticket_id":  ticketIDs[0],
+			"ticket_ids": ticketIDs,
 		}
 		statusJSON, _ := json.Marshal(statusData)
 		s.redis.Set(s.ctx, fmt.Sprintf("ticket_status:%s", trackingID), statusJSON, 1*time.Hour)
 
 	} else {
-		// Init SSLCommerz
-		tranID := fmt.Sprintf("TICKET-%d-%s", createdTicket.Id, uuid.New().String()[:8])
-		successUrl := fmt.Sprintf("%s/ticket/payment/success?id=%d", baseURL, createdTicket.Id)
-		failUrl := fmt.Sprintf("%s/ticket/payment/fail", baseURL)
-		cancelUrl := fmt.Sprintf("%s/ticket/payment/cancel", baseURL)
+		tranID := fmt.Sprintf("TICKET-%d-%s", ticketIDs[0], batchID[:8])
+		successUrl := fmt.Sprintf("%s/ticket/payment/success?id=%d", baseURL, ticketIDs[0])
+		failUrl := fmt.Sprintf("%s/ticket/payment/fail?id=%d", baseURL, ticketIDs[0])
+		cancelUrl := fmt.Sprintf("%s/ticket/payment/cancel?id=%d", baseURL, ticketIDs[0])
 
-		gatewayUrl, err := s.sslCommerz.InitPayment(req.Fare, tranID, successUrl, failUrl, cancelUrl)
+		gatewayUrl, err := s.sslCommerz.InitPayment(req.TotalFare, tranID, successUrl, failUrl, cancelUrl)
 		if err != nil {
 			log.Printf("Gateway init failed: %v", err)
 			statusData := map[string]interface{}{
@@ -179,11 +188,11 @@ func (w *TicketWorker) ProcessTicket(req TicketRequestMessage, trackingID string
 			return
 		}
 
-		// Update status with Gateway URL
 		statusData := map[string]interface{}{
-			"status":    "ready",
-			"url":       gatewayUrl,
-			"ticket_id": createdTicket.Id,
+			"status":     "ready",
+			"url":        gatewayUrl,
+			"ticket_id":  ticketIDs[0],
+			"ticket_ids": ticketIDs,
 		}
 		statusJSON, _ := json.Marshal(statusData)
 		s.redis.Set(s.ctx, fmt.Sprintf("ticket_status:%s", trackingID), statusJSON, 1*time.Hour)

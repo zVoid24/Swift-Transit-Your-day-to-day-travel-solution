@@ -106,9 +106,23 @@ class _TicketListScreenState extends State<TicketListScreen> {
                 if (ticket is! Map<String, dynamic>)
                   return const SizedBox.shrink();
 
-                final status = ticket['paid_status'] == true
-                    ? (ticket['checked'] == true ? 'Completed' : 'Upcoming')
-                    : 'Unpaid';
+                final isCancelled = ticket['cancelled_at'] != null;
+                final status = isCancelled
+                    ? 'Cancelled'
+                    : ticket['paid_status'] == true
+                        ? (ticket['checked'] == true ? 'Completed' : 'Upcoming')
+                        : 'Unpaid';
+
+                final batchId = (ticket['batch_id'] ?? '').toString();
+                final grouped = provider.tickets
+                    .where((t) =>
+                        t is Map<String, dynamic> &&
+                        (t['batch_id'] ?? '').toString() == batchId)
+                    .cast<Map<String, dynamic>>()
+                    .toList();
+                final initialIndex = grouped.indexWhere(
+                  (element) => element['id'] == ticket['id'],
+                );
 
                 return Card(
                   margin: const EdgeInsets.only(bottom: 12),
@@ -117,7 +131,10 @@ class _TicketListScreenState extends State<TicketListScreen> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => TicketDetailScreen(ticket: ticket),
+                          builder: (_) => TicketDetailScreen(
+                            tickets: grouped,
+                            initialIndex: initialIndex < 0 ? 0 : initialIndex,
+                          ),
                         ),
                       );
                     },
@@ -136,7 +153,9 @@ class _TicketListScreenState extends State<TicketListScreen> {
                         color: Colors.grey.shade200,
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: Text(status),
+                      child: Text(
+                        grouped.length > 1 ? '$status (${grouped.length})' : status,
+                      ),
                     ),
                   ),
                 );

@@ -2,14 +2,19 @@ package ticket
 
 import (
 	"net/http"
+	"strconv"
 )
 
 func (h *Handler) PaymentFail(w http.ResponseWriter, r *http.Request) {
-	// We can log the failure here if needed
-	// idStr := r.URL.Query().Get("id")
+	idStr := r.URL.Query().Get("id")
+	if idStr != "" {
+		if id, err := strconv.Atoi(idStr); err == nil {
+			_, _ = h.svc.HandlePaymentResult(int64(id), "failed")
+		}
+	}
 
 	h.utilHandler.SendError(w, map[string]string{
 		"message": "Payment failed",
 		"status":  "failed",
-	}, http.StatusOK) // Return 200 so frontend can handle it gracefully, or 400? Usually 200 with status failed is easier for redirection handling.
+	}, http.StatusOK)
 }
