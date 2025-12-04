@@ -302,7 +302,8 @@ class DashboardProvider extends ChangeNotifier {
         // Some environments return `gateway_url` (recharge) while others
         // mirror the ticket flow and return `payment_url`. Handle both so the
         // webview always opens.
-        final paymentUrl = (data['gateway_url'] ?? data['payment_url'])?.toString();
+        final paymentUrl = (data['gateway_url'] ?? data['payment_url'])
+            ?.toString();
         if (paymentUrl == null || paymentUrl.isEmpty) {
           throw Exception('Invalid payment URL');
         }

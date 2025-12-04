@@ -39,15 +39,28 @@ class _PaymentWebViewScreenState extends State<PaymentWebViewScreen> {
       ..setNavigationDelegate(
         NavigationDelegate(
           onPageStarted: (_) => setState(() => _isLoading = true),
-          onPageFinished: (_) => setState(() => _isLoading = false),
+          onPageFinished: (url) {
+            setState(() => _isLoading = false);
+            final uri = Uri.parse(url);
+            if (uri.path.contains('/wallet/recharge')) {
+              if (uri.path.contains('success')) {
+                widget.onSuccess?.call();
+              } else if (uri.path.contains('fail') ||
+                  uri.path.contains('cancel')) {
+                widget.onFailure?.call();
+              }
+            } else if (uri.path.contains('/ticket') &&
+                uri.path.contains('success')) {
+              // For tickets, we also want to ensure we trigger success
+              widget.onSuccess?.call();
+            }
+          },
           onNavigationRequest: (request) {
             final uri = Uri.tryParse(request.url);
             if (uri != null) {
               if (uri.path.contains('/ticket')) {
                 if (uri.path.contains('success')) {
-                  Future.delayed(const Duration(seconds: 1), () {
-                    widget.onSuccess?.call();
-                  });
+                  // Handled in onPageFinished
                   return NavigationDecision.navigate;
                 }
                 if (uri.path.contains('fail') || uri.path.contains('cancel')) {
@@ -61,14 +74,8 @@ class _PaymentWebViewScreenState extends State<PaymentWebViewScreen> {
               }
 
               if (uri.path.contains('/wallet/recharge')) {
-                if (uri.path.contains('success')) {
-                  widget.onSuccess?.call();
-                  return NavigationDecision.navigate;
-                }
-                if (uri.path.contains('fail') || uri.path.contains('cancel')) {
-                  widget.onFailure?.call();
-                  return NavigationDecision.navigate;
-                }
+                // Handled in onPageFinished
+                return NavigationDecision.navigate;
               }
             }
             return NavigationDecision.navigate;

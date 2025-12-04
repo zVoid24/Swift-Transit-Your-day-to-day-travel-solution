@@ -270,7 +270,7 @@ class _BalanceCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
                   Consumer<DashboardProvider>(
-                    builder: (context, provider, _) {
+                    builder: (consumerContext, provider, _) {
                       return SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
@@ -615,7 +615,7 @@ class _MyTicketCardState extends State<_MyTicketCard> {
               ),
               TextButton(
                 onPressed: () {
-                  Navigator.push(
+                  Navigator.pushReplacement(
                     context,
                     MaterialPageRoute(builder: (_) => const TicketListScreen()),
                   );
