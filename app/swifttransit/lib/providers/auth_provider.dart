@@ -29,8 +29,10 @@ class AuthProvider extends ChangeNotifier {
   Future<bool> login(String mobile, String password) async {
     isLoading = true;
     notifyListeners();
+    print("Login attempt for mobile $mobile");
 
     try {
+      print(AppConstants.baseUrl);
       final response = await http.post(
         Uri.parse('${AppConstants.baseUrl}/auth/login'),
         headers: {'Content-Type': 'application/json'},

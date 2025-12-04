@@ -22,10 +22,7 @@ class LiveBusLocationScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
       create: (_) => LiveLocationProvider(routeId: routeId)..connect(),
-      child: _LiveBusLocationView(
-        title: title,
-        busName: busName,
-      ),
+      child: _LiveBusLocationView(title: title, busName: busName),
     );
   }
 }
@@ -48,19 +45,13 @@ class _LiveBusLocationView extends StatelessWidget {
           width: 52,
           height: 52,
           point: update.latLng,
-          child: const Icon(
-            Icons.directions_bus,
-            color: Colors.red,
-            size: 40,
-          ),
+          child: const Icon(Icons.directions_bus, color: Colors.red, size: 40),
         ),
       );
     }
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Live Bus — $title'),
-      ),
+      appBar: AppBar(title: Text('Live Bus — $title')),
       body: Column(
         children: [
           Expanded(
@@ -94,7 +85,7 @@ class _LiveBusLocationView extends StatelessWidget {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        busName ?? 'Route $routeId',
+                        busName ?? 'Route ${provider.routeId}',
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
@@ -126,7 +117,9 @@ class _LiveBusLocationView extends StatelessWidget {
                       const SizedBox(width: 8),
                       if (update.speed != null)
                         Chip(
-                          label: Text('${update.speed!.toStringAsFixed(1)} km/h'),
+                          label: Text(
+                            '${update.speed!.toStringAsFixed(1)} km/h',
+                          ),
                         ),
                       const Spacer(),
                       Text(

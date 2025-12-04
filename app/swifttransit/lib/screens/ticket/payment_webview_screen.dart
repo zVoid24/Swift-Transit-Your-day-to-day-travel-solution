@@ -1,15 +1,22 @@
+import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+import '../../core/constants.dart';
 
 class PaymentWebViewScreen extends StatefulWidget {
   const PaymentWebViewScreen({
     super.key,
     required this.paymentUrl,
+    this.ticketId,
     this.onSuccess,
     this.onFailure,
   });
 
   final String paymentUrl;
+  final int? ticketId;
   final VoidCallback? onSuccess;
   final VoidCallback? onFailure;
 
@@ -21,6 +28,7 @@ class _PaymentWebViewScreenState extends State<PaymentWebViewScreen> {
   late final WebViewController _controller;
   bool _isLoading = true;
   String? _resultStatus; // 'success' or 'failure'
+  Timer? _pollTimer;
 
   @override
   void initState() {
@@ -48,9 +56,59 @@ class _PaymentWebViewScreenState extends State<PaymentWebViewScreen> {
         ),
       )
       ..loadRequest(Uri.parse(widget.paymentUrl));
+
+    if (widget.ticketId != null) {
+      _startPolling();
+    }
+  }
+
+  @override
+  void dispose() {
+    _pollTimer?.cancel();
+    super.dispose();
+  }
+
+  void _startPolling() {
+    _pollTimer = Timer.periodic(const Duration(seconds: 3), (timer) async {
+      if (_resultStatus != null) {
+        timer.cancel();
+        return;
+      }
+      await _checkPaymentStatus();
+    });
+  }
+
+  Future<void> _checkPaymentStatus() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final jwt = prefs.getString('jwt');
+      if (jwt == null) return;
+
+      final response = await http.get(
+        Uri.parse(
+          '${AppConstants.baseUrl}/ticket/status?id=${widget.ticketId}',
+        ),
+        headers: {'Authorization': 'Bearer $jwt'},
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final status = data['status'];
+        if (status == 'paid') {
+          _showResult(success: true);
+        } else if (status == 'failed') {
+          _showResult(success: false);
+        }
+      }
+    } catch (e) {
+      debugPrint("Error polling payment status: $e");
+    }
   }
 
   void _showResult({required bool success}) {
+    if (_resultStatus != null) return; // Already shown
+
+    _pollTimer?.cancel();
     setState(() {
       _isLoading = false;
       _resultStatus = success ? 'success' : 'failure';
@@ -70,16 +128,11 @@ class _PaymentWebViewScreenState extends State<PaymentWebViewScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Complete Payment'),
-      ),
+      appBar: AppBar(title: const Text('Complete Payment')),
       body: Stack(
         children: [
           WebViewWidget(controller: _controller),
-          if (_isLoading)
-            const LinearProgressIndicator(
-              minHeight: 2,
-            ),
+          if (_isLoading) const LinearProgressIndicator(minHeight: 2),
           if (_resultStatus != null)
             Container(
               color: Colors.white,

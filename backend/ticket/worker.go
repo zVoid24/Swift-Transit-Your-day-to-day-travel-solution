@@ -112,7 +112,12 @@ func (w *TicketWorker) ProcessTicket(req TicketRequestMessage, trackingID string
 		if err != nil {
 			log.Printf("Payment failed: %v", err)
 			// Update status to failed
-			s.redis.Set(s.ctx, fmt.Sprintf("ticket_status:%s", trackingID), "failed", 1*time.Hour)
+			statusData := map[string]interface{}{
+				"status": "failed",
+				"error":  "Insufficient balance",
+			}
+			statusJSON, _ := json.Marshal(statusData)
+			s.redis.Set(s.ctx, fmt.Sprintf("ticket_status:%s", trackingID), statusJSON, 1*time.Hour)
 			return
 		}
 		ticket.PaidStatus = true
@@ -124,7 +129,12 @@ func (w *TicketWorker) ProcessTicket(req TicketRequestMessage, trackingID string
 	createdTicket, err := s.repo.Create(ticket)
 	if err != nil {
 		log.Printf("Failed to create ticket: %v", err)
-		s.redis.Set(s.ctx, fmt.Sprintf("ticket_status:%s", trackingID), "failed", 1*time.Hour)
+		statusData := map[string]interface{}{
+			"status": "failed",
+			"error":  "Failed to create ticket",
+		}
+		statusJSON, _ := json.Marshal(statusData)
+		s.redis.Set(s.ctx, fmt.Sprintf("ticket_status:%s", trackingID), statusJSON, 1*time.Hour)
 		return
 	}
 
@@ -141,7 +151,14 @@ func (w *TicketWorker) ProcessTicket(req TicketRequestMessage, trackingID string
 		// For wallet, there is no payment URL, so maybe we return a special URL or just "Success"
 		// The client expects a URL or "Ready".
 		// Let's store a success message or a dummy URL.
-		s.redis.Set(s.ctx, fmt.Sprintf("ticket_status:%s", trackingID), fmt.Sprintf("/ticket/download?id=%d", createdTicket.Id), 1*time.Hour)
+		// Update status to success
+		statusData := map[string]interface{}{
+			"status":    "paid",
+			"url":       fmt.Sprintf("/ticket/download?id=%d", createdTicket.Id),
+			"ticket_id": createdTicket.Id,
+		}
+		statusJSON, _ := json.Marshal(statusData)
+		s.redis.Set(s.ctx, fmt.Sprintf("ticket_status:%s", trackingID), statusJSON, 1*time.Hour)
 
 	} else {
 		// Init SSLCommerz
@@ -153,11 +170,22 @@ func (w *TicketWorker) ProcessTicket(req TicketRequestMessage, trackingID string
 		gatewayUrl, err := s.sslCommerz.InitPayment(req.Fare, tranID, successUrl, failUrl, cancelUrl)
 		if err != nil {
 			log.Printf("Gateway init failed: %v", err)
-			s.redis.Set(s.ctx, fmt.Sprintf("ticket_status:%s", trackingID), "failed", 1*time.Hour)
+			statusData := map[string]interface{}{
+				"status": "failed",
+				"error":  "Gateway init failed",
+			}
+			statusJSON, _ := json.Marshal(statusData)
+			s.redis.Set(s.ctx, fmt.Sprintf("ticket_status:%s", trackingID), statusJSON, 1*time.Hour)
 			return
 		}
 
 		// Update status with Gateway URL
-		s.redis.Set(s.ctx, fmt.Sprintf("ticket_status:%s", trackingID), gatewayUrl, 1*time.Hour)
+		statusData := map[string]interface{}{
+			"status":    "ready",
+			"url":       gatewayUrl,
+			"ticket_id": createdTicket.Id,
+		}
+		statusJSON, _ := json.Marshal(statusData)
+		s.redis.Set(s.ctx, fmt.Sprintf("ticket_status:%s", trackingID), statusJSON, 1*time.Hour)
 	}
 }

@@ -66,12 +66,14 @@ class DashboardProvider extends ChangeNotifier {
   }
 
   List<Map<String, dynamic>> get dashboardTickets {
-    final sorted = tickets
-        .whereType<Map<String, dynamic>>()
-        .toList()
+    final sorted = tickets.whereType<Map<String, dynamic>>().toList()
       ..sort((a, b) {
-        final dateA = DateTime.tryParse(a['created_at'] ?? '')?.millisecondsSinceEpoch ?? 0;
-        final dateB = DateTime.tryParse(b['created_at'] ?? '')?.millisecondsSinceEpoch ?? 0;
+        final dateA =
+            DateTime.tryParse(a['created_at'] ?? '')?.millisecondsSinceEpoch ??
+            0;
+        final dateB =
+            DateTime.tryParse(b['created_at'] ?? '')?.millisecondsSinceEpoch ??
+            0;
         return dateB.compareTo(dateA);
       });
 
@@ -351,7 +353,8 @@ class DashboardProvider extends ChangeNotifier {
   }
 
   double? get currentFare {
-    if (selectedBusIndex == null || selectedBusIndex! >= availableBuses.length) {
+    if (selectedBusIndex == null ||
+        selectedBusIndex! >= availableBuses.length) {
       return null;
     }
     final fare = availableBuses[selectedBusIndex!]['fare'];
@@ -394,8 +397,9 @@ class DashboardProvider extends ChangeNotifier {
     final userId = user['id'];
 
     try {
-      final normalizedMethod =
-          paymentMethod.toLowerCase() == 'wallet' ? 'wallet' : 'gateway';
+      final normalizedMethod = paymentMethod.toLowerCase() == 'wallet'
+          ? 'wallet'
+          : 'gateway';
       final response = await http.post(
         Uri.parse('${AppConstants.baseUrl}/ticket/buy'),
         headers: {
@@ -422,11 +426,7 @@ class DashboardProvider extends ChangeNotifier {
           ),
         );
 
-        await _pollTicketStatus(
-          context,
-          data['tracking_id'],
-          normalizedMethod,
-        );
+        await _pollTicketStatus(context, data['tracking_id'], normalizedMethod);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text("Failed to buy ticket: ${response.body}")),
@@ -462,6 +462,8 @@ class DashboardProvider extends ChangeNotifier {
         if (response.statusCode == 200) {
           final data = jsonDecode(response.body);
           final paymentUrl = (data['payment_url'] ?? '') as String;
+          final ticketId = (data['ticket']?['id'] as num?)?.toInt();
+
           if (paymentUrl.isEmpty) {
             attempts++;
             continue;
@@ -483,7 +485,7 @@ class DashboardProvider extends ChangeNotifier {
             return;
           }
 
-          await _openGatewayCheckout(context, paymentUrl);
+          await _openGatewayCheckout(context, paymentUrl, ticketId);
           await fetchTickets();
           await fetchUserInfo();
           return;
@@ -506,11 +508,13 @@ class DashboardProvider extends ChangeNotifier {
   Future<void> _openGatewayCheckout(
     BuildContext context,
     String url,
+    int? ticketId,
   ) async {
     await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => PaymentWebViewScreen(
           paymentUrl: url,
+          ticketId: ticketId,
           onSuccess: () {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text('Payment completed successfully.')),

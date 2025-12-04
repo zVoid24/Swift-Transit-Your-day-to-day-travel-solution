@@ -25,8 +25,23 @@ func (h *Handler) PaymentSuccess(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.utilHandler.SendData(w, map[string]string{
-		"message":      "Payment successful",
-		"download_url": fmt.Sprintf("%s/ticket/download?id=%d", h.publicBaseURL, id),
-	}, http.StatusOK)
+	w.Header().Set("Content-Type", "text/html")
+	fmt.Fprintf(w, `
+		<html>
+			<head>
+				<title>Payment Successful</title>
+				<meta name="viewport" content="width=device-width, initial-scale=1.0">
+				<style>
+					body { font-family: Arial, sans-serif; text-align: center; padding: 20px; }
+					.icon { color: green; font-size: 48px; }
+				</style>
+			</head>
+			<body>
+				<div class="icon">✓</div>
+				<h1>Payment Successful</h1>
+				<p>Your payment has been processed successfully.</p>
+				<p>You can close this window now.</p>
+			</body>
+		</html>
+	`)
 }

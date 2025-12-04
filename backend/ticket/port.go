@@ -39,6 +39,7 @@ type Service interface {
 	ValidatePayment(valID string, tranID string, amount float64) (bool, error)
 	GetByUserID(userId int64, limit, offset int) ([]domain.Ticket, int, error)
 	ValidateTicket(id int64) error
+	GetPaymentStatus(ticketID int64) (string, error)
 }
 
 type TicketRepo interface {

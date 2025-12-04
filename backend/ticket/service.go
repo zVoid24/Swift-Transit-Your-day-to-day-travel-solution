@@ -119,17 +119,68 @@ func (s *service) GetTicketStatus(trackingID string) (*BuyTicketResponse, error)
 		return nil, err
 	}
 
+	// Try to parse as JSON
+	var statusData map[string]interface{}
+	if err := json.Unmarshal([]byte(val), &statusData); err == nil {
+		status, _ := statusData["status"].(string)
+		url, _ := statusData["url"].(string)
+
+		var ticketID int64
+		if tid, ok := statusData["ticket_id"].(float64); ok {
+			ticketID = int64(tid)
+		}
+
+		resp := &BuyTicketResponse{
+			Message: status,
+		}
+
+		if status == "ready" {
+			resp.PaymentURL = url
+			resp.Message = "Ready"
+			if ticketID != 0 {
+				resp.Ticket = &domain.Ticket{Id: ticketID}
+			}
+		} else if status == "paid" {
+			resp.DownloadURL = url
+			resp.Message = "Paid"
+			if ticketID != 0 {
+				resp.Ticket = &domain.Ticket{Id: ticketID}
+			}
+		} else if status == "failed" {
+			resp.Message = "Failed"
+			if errMsg, ok := statusData["error"].(string); ok {
+				resp.Message = fmt.Sprintf("Failed: %s", errMsg)
+			}
+		} else {
+			resp.Message = "Processing"
+		}
+
+		return resp, nil
+	}
+
+	// Fallback for old string format (if any) or simple processing state
 	if val == "processing" {
 		return &BuyTicketResponse{
 			Message: "Processing",
 		}, nil
 	}
 
-	// If it's a URL (success)
+	// If it's a URL (success) - legacy fallback
 	return &BuyTicketResponse{
 		PaymentURL: val,
 		Message:    "Ready",
 	}, nil
+}
+
+func (s *service) GetPaymentStatus(ticketID int64) (string, error) {
+	ticket, err := s.repo.Get(ticketID)
+	if err != nil {
+		return "", err
+	}
+	if ticket.PaidStatus {
+		return "paid", nil
+	}
+	return "unpaid", nil
 }
 
 func (s *service) ValidatePayment(valID string, tranID string, amount float64) (bool, error) {
