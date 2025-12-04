@@ -33,6 +33,7 @@ class DashboardProvider extends ChangeNotifier {
   List<LatLng> routePoints = [];
   List<Marker> markers = [];
   int? currentRouteId;
+  String? currentBusName;
 
   List<dynamic> tickets = [];
   bool isLoadingTickets = false;
@@ -217,6 +218,7 @@ class DashboardProvider extends ChangeNotifier {
 
         final bus = data[0]; // Take the first bus for now
         currentRouteId = bus['id'];
+        currentBusName = bus['name'] ?? "Swift Bus";
         final geometry = bus['linestring_geojson']; // GeoJSON string
         final stops = bus['stops'] as List;
 
@@ -261,7 +263,10 @@ class DashboardProvider extends ChangeNotifier {
   }
 
   /// Buy ticket - unchanged but kept here for completeness
-  Future<void> buyTicket(BuildContext context) async {
+  Future<void> buyTicket(
+    BuildContext context, {
+    String paymentMethod = "gateway",
+  }) async {
     if (selectedDeparture == null || selectedDestination == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -301,10 +306,10 @@ class DashboardProvider extends ChangeNotifier {
         body: jsonEncode({
           'user_id': userId,
           'route_id': currentRouteId,
-          'bus_name': "Swift Bus", // Default for now
+          'bus_name': currentBusName ?? "Swift Bus",
           'start_destination': selectedDeparture,
           'end_destination': selectedDestination,
-          'payment_method': "gateway",
+          'payment_method': paymentMethod,
         }),
       );
 

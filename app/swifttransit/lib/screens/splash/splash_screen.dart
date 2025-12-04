@@ -16,7 +16,7 @@ class SplashScreen extends StatefulWidget {
 
   const SplashScreen({
     super.key,
-    this.minDisplayDuration = const Duration(seconds: 20),
+    this.minDisplayDuration = const Duration(seconds: 5),
     this.initCallback,
   });
 
@@ -105,7 +105,7 @@ class _SplashScreenState extends State<SplashScreen>
     // Alternative test approach: if you prefer explicitly navigate after a delay,
     // comment the line above and uncomment these lines:
     //
-    Timer(const Duration(seconds: 60), () {
+    Timer(const Duration(seconds: 10), () {
       if (!mounted) return;
       Navigator.pushReplacementNamed(context, '/login');
     });

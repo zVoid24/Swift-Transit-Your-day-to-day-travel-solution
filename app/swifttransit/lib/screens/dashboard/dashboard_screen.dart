@@ -788,7 +788,7 @@ class _SuggestedTrip extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(Icons.lightbulb, color: AppColors.primary),
+          Icon(Icons.lightbulb, color: Colors.amber),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -814,7 +814,7 @@ class _SuggestedTrip extends StatelessWidget {
                 borderRadius: BorderRadius.circular(10),
               ),
             ),
-            child: const Text('Book'),
+            child: const Text('Book', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),

@@ -3,6 +3,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:hugeicons/hugeicons.dart';
 
 import '../../providers/dashboard_provider.dart';
 import '../../core/colors.dart';
@@ -27,20 +28,22 @@ class _BuyTicketScreenState extends State<BuyTicketScreen> {
   @override
   void initState() {
     super.initState();
-    // Initialize provider state if needed
   }
 
   void _onSearchChanged(String query, bool isDeparture) async {
     final provider = Provider.of<DashboardProvider>(context, listen: false);
     final suggestions = await provider.searchStops(query);
+
+    if (!mounted) return;
+
     setState(() {
       if (isDeparture) {
         _departureSuggestions = suggestions;
-        _showDepartureSuggestions = true;
+        _showDepartureSuggestions = suggestions.isNotEmpty;
         _showDestinationSuggestions = false;
       } else {
         _destinationSuggestions = suggestions;
-        _showDestinationSuggestions = true;
+        _showDestinationSuggestions = suggestions.isNotEmpty;
         _showDepartureSuggestions = false;
       }
     });
@@ -59,6 +62,15 @@ class _BuyTicketScreenState extends State<BuyTicketScreen> {
         _showDestinationSuggestions = false;
       }
     });
+  }
+
+  void _zoomToRoute(List<LatLng> points) {
+    if (points.isEmpty) return;
+
+    final bounds = LatLngBounds.fromPoints(points);
+    _mapController.fitCamera(
+      CameraFit.bounds(bounds: bounds, padding: const EdgeInsets.all(50)),
+    );
   }
 
   @override
@@ -109,9 +121,9 @@ class _BuyTicketScreenState extends State<BuyTicketScreen> {
 
           // Bottom Sheet
           DraggableScrollableSheet(
-            initialChildSize: 0.4,
+            initialChildSize: 0.45,
             minChildSize: 0.2,
-            maxChildSize: 0.8,
+            maxChildSize: 0.85,
             builder: (context, scrollController) {
               return Container(
                 decoration: const BoxDecoration(
@@ -174,59 +186,39 @@ class _BuyTicketScreenState extends State<BuyTicketScreen> {
                     const SizedBox(height: 24),
 
                     // Search Button
-                    SizedBox(
-                      width: double.infinity,
-                      height: 54,
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                        ),
-                        onPressed: () async {
-                          await provider.searchBus();
-                          // Zoom to fit route if found
-                          if (provider.routePoints.isNotEmpty) {
-                            // Simple centering on first point for now
-                            _mapController.move(provider.routePoints.first, 13);
-                          }
-                        },
-                        child: Text(
-                          "Search Route",
-                          style: GoogleFonts.poppins(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    if (provider.currentRouteId != null)
+                    if (provider.currentRouteId == null)
                       SizedBox(
                         width: double.infinity,
                         height: 54,
-                        child: OutlinedButton(
-                          style: OutlinedButton.styleFrom(
-                            side: BorderSide(color: AppColors.primary),
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(14),
                             ),
                           ),
-                          onPressed: () => provider.buyTicket(context),
+                          onPressed: () async {
+                            await provider.searchBus();
+                            if (provider.routePoints.isNotEmpty) {
+                              _zoomToRoute(provider.routePoints);
+                            }
+                          },
                           child: Text(
-                            "Buy Ticket",
+                            "Search Route",
                             style: GoogleFonts.poppins(
-                              color: AppColors.primary,
+                              color: Colors.white,
                               fontWeight: FontWeight.bold,
                               fontSize: 16,
                             ),
                           ),
                         ),
                       ),
+
+                    const SizedBox(height: 16),
+
+                    // Bus Selection & Payment Cards
+                    if (provider.currentRouteId != null)
+                      _buildSelectionCards(context, provider),
                   ],
                 ),
               );
@@ -265,22 +257,199 @@ class _BuyTicketScreenState extends State<BuyTicketScreen> {
   }
 
   Widget _buildSuggestionsList(List<String> suggestions, bool isDeparture) {
+    if (suggestions.isEmpty) return const SizedBox.shrink();
+
     return Container(
-      height: 150,
+      constraints: const BoxConstraints(maxHeight: 150),
+      margin: const EdgeInsets.only(top: 8),
       decoration: BoxDecoration(
         color: Colors.white,
         border: Border.all(color: Colors.grey[200]!),
         borderRadius: BorderRadius.circular(8),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: ListView.builder(
+        shrinkWrap: true,
+        padding: EdgeInsets.zero,
         itemCount: suggestions.length,
         itemBuilder: (context, index) {
           return ListTile(
-            title: Text(suggestions[index]),
+            dense: true,
+            title: Text(
+              suggestions[index],
+              style: GoogleFonts.poppins(fontSize: 14),
+            ),
             onTap: () => _selectSuggestion(suggestions[index], isDeparture),
           );
         },
       ),
+    );
+  }
+
+  Widget _buildSelectionCards(
+    BuildContext context,
+    DashboardProvider provider,
+  ) {
+    return Column(
+      children: [
+        // Card 1: Bus Selection
+        Card(
+          elevation: 2,
+          shadowColor: Colors.black12,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: HugeIcon(
+                    icon: HugeIcons.strokeRoundedBus01,
+                    color: AppColors.primary,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      provider.currentBusName ?? "Swift Bus",
+                      style: GoogleFonts.poppins(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(
+                      "Available Now",
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        color: Colors.green,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+                const Spacer(),
+                Text(
+                  "৳50", // Mock fare for now
+                  style: GoogleFonts.poppins(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+
+        // Card 2: Pay Online
+        Card(
+          elevation: 2,
+          shadowColor: Colors.black12,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: InkWell(
+            onTap: () => provider.buyTicket(context, paymentMethod: "gateway"),
+            borderRadius: BorderRadius.circular(16),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.payment,
+                      color: Colors.blue,
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    "Pay Online",
+                    style: GoogleFonts.poppins(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const Spacer(),
+                  const Icon(
+                    Icons.arrow_forward_ios,
+                    size: 16,
+                    color: Colors.grey,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+
+        // Card 3: Pay via Swift Balance
+        Card(
+          elevation: 2,
+          shadowColor: Colors.black12,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: InkWell(
+            onTap: () => provider.buyTicket(context, paymentMethod: "balance"),
+            borderRadius: BorderRadius.circular(16),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.account_balance_wallet,
+                      color: Colors.orange,
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    "Pay via Swift Balance",
+                    style: GoogleFonts.poppins(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const Spacer(),
+                  const Icon(
+                    Icons.arrow_forward_ios,
+                    size: 16,
+                    color: Colors.grey,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

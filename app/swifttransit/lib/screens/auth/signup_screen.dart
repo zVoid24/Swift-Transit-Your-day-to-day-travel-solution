@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_vector_icons/flutter_vector_icons.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/colors.dart';
-import '../../../widgets/app_snackbar.dart';
 import '../../../providers/auth_provider.dart';
-import '../../../widgets/input_field.dart';
-import 'login_screen.dart';
+import '../../../widgets/app_snackbar.dart';
 import 'otp_verification_screen.dart';
 
 class SignupScreen extends StatefulWidget {
@@ -26,6 +25,9 @@ class _SignupScreenState extends State<SignupScreen> {
   final _phoneFocus = FocusNode();
   final _passwordFocus = FocusNode();
   final _confirmFocus = FocusNode();
+
+  bool _isPasswordVisible = false;
+  bool _isConfirmPasswordVisible = false;
 
   @override
   void dispose() {
@@ -92,111 +94,136 @@ class _SignupScreenState extends State<SignupScreen> {
                       autovalidateMode: AutovalidateMode.onUserInteraction,
                       child: Column(
                         children: [
-                          AppInputField(
+                          buildInputField(
                             controller: auth.fullName,
-                            icon: HugeIcons.strokeRoundedUserCircle,
                             hint: 'Full Name (As Per NID)',
+                            icon: HugeIcons.strokeRoundedUserCircle,
                             focusNode: _nameFocus,
                             textInputAction: TextInputAction.next,
                             onFieldSubmitted: (_) => _emailFocus.requestFocus(),
                             validator: (v) {
-                              if (v == null || v.trim().isEmpty)
+                              if (v == null || v.trim().isEmpty) {
                                 return 'Enter full name';
+                              }
                               return null;
                             },
                           ),
-                          const SizedBox(height: 4),
+                          const SizedBox(height: 12),
 
-                          AppInputField(
+                          buildInputField(
                             controller: auth.email,
-                            icon: HugeIcons.strokeRoundedMail01,
                             hint: 'Email Address',
+                            icon: HugeIcons.strokeRoundedMail01,
                             keyboardType: TextInputType.emailAddress,
                             focusNode: _emailFocus,
                             textInputAction: TextInputAction.next,
                             onFieldSubmitted: (_) => _nidFocus.requestFocus(),
                             validator: (v) {
-                              if (v == null || v.trim().isEmpty)
+                              if (v == null || v.trim().isEmpty) {
                                 return 'Enter email';
+                              }
                               final regex = RegExp(
                                 r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
                               );
-                              if (!regex.hasMatch(v.trim()))
+                              if (!regex.hasMatch(v.trim())) {
                                 return 'Enter valid email';
+                              }
                               return null;
                             },
                           ),
-                          const SizedBox(height: 4),
+                          const SizedBox(height: 12),
 
-                          AppInputField(
+                          buildInputField(
                             controller: auth.nid,
-                            icon: HugeIcons.strokeRoundedIdentification,
                             hint: 'NID Number',
+                            icon: HugeIcons.strokeRoundedIdentification,
                             keyboardType: TextInputType.number,
                             focusNode: _nidFocus,
                             textInputAction: TextInputAction.next,
                             onFieldSubmitted: (_) => _phoneFocus.requestFocus(),
                             validator: (v) {
-                              if (v == null || v.trim().isEmpty)
+                              if (v == null || v.trim().isEmpty) {
                                 return 'Enter NID';
+                              }
                               return null;
                             },
                           ),
-                          const SizedBox(height: 4),
+                          const SizedBox(height: 12),
 
-                          AppInputField(
+                          buildInputField(
                             controller: auth.phone,
-                            icon: HugeIcons.strokeRoundedCall,
                             hint: 'Contact Number',
+                            icon: HugeIcons.strokeRoundedCall,
                             keyboardType: TextInputType.phone,
                             focusNode: _phoneFocus,
                             textInputAction: TextInputAction.next,
                             onFieldSubmitted: (_) =>
                                 _passwordFocus.requestFocus(),
                             validator: (v) {
-                              if (v == null || v.trim().isEmpty)
+                              if (v == null || v.trim().isEmpty) {
                                 return 'Enter contact number';
-                              if (v.trim().length < 8)
+                              }
+                              if (v.trim().length < 8) {
                                 return 'Enter valid phone';
+                              }
                               return null;
                             },
                           ),
-                          const SizedBox(height: 4),
+                          const SizedBox(height: 12),
 
-                          AppInputField(
+                          buildInputField(
                             controller: auth.password,
-                            icon: HugeIcons.strokeRoundedLockPassword,
                             hint: 'Create Password',
+                            icon: HugeIcons.strokeRoundedLockPassword,
                             isPassword: true,
+                            isPasswordVisible: _isPasswordVisible,
+                            onVisibilityChanged: () {
+                              setState(() {
+                                _isPasswordVisible = !_isPasswordVisible;
+                              });
+                            },
                             focusNode: _passwordFocus,
                             textInputAction: TextInputAction.next,
                             onFieldSubmitted: (_) =>
                                 _confirmFocus.requestFocus(),
                             validator: (v) {
-                              if (v == null || v.isEmpty)
+                              if (v == null || v.isEmpty) {
                                 return 'Enter password';
-                              if (v.length < 6)
+                              }
+                              if (v.length < 6) {
                                 return 'Password must be at least 6 characters';
+                              }
                               return null;
                             },
                           ),
-                          const SizedBox(height: 4),
+                          const SizedBox(height: 12),
 
-                          AppInputField(
+                          buildInputField(
                             controller: auth.confirmPassword,
-                            icon: HugeIcons.strokeRoundedLockPassword,
                             hint: 'Confirm Password',
+                            icon: HugeIcons.strokeRoundedLockPassword,
                             isPassword: true,
+                            isPasswordVisible: _isConfirmPasswordVisible,
+                            onVisibilityChanged: () {
+                              setState(() {
+                                _isConfirmPasswordVisible =
+                                    !_isConfirmPasswordVisible;
+                              });
+                            },
                             focusNode: _confirmFocus,
                             textInputAction: TextInputAction.done,
                             validator: (v) {
-                              if (v == null || v.isEmpty)
+                              if (v == null || v.isEmpty) {
                                 return 'Confirm your password';
-                              if (v != auth.password.text)
+                              }
+                              if (v != auth.password.text) {
                                 return 'Passwords do not match';
+                              }
                               return null;
                             },
                           ),
+
+                          const SizedBox(height: 12),
 
                           // Agreement
                           Row(
@@ -319,22 +346,79 @@ class _SignupScreenState extends State<SignupScreen> {
                         style: GoogleFonts.poppins(color: Colors.black87),
                       ),
                       GestureDetector(
-                    onTap: () => Navigator.pushNamed(context, '/login'),
-                    child: Text(
-                      "Login",
-                      style: GoogleFonts.poppins(
-                        color: AppColors.primary,
-                        fontWeight: FontWeight.bold,
-                        decoration: TextDecoration.underline,
+                        onTap: () => Navigator.pushNamed(context, '/login'),
+                        child: Text(
+                          "Login",
+                          style: GoogleFonts.poppins(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.bold,
+                            decoration: TextDecoration.underline,
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
                     ],
                   ),
                 ],
               ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget buildInputField({
+    required TextEditingController controller,
+    required String hint,
+    required dynamic icon,
+    bool isPassword = false,
+    bool isPasswordVisible = false,
+    VoidCallback? onVisibilityChanged,
+    TextInputType? keyboardType,
+    FocusNode? focusNode,
+    TextInputAction? textInputAction,
+    ValueChanged<String>? onFieldSubmitted,
+    String? Function(String?)? validator,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: TextFormField(
+        controller: controller,
+        obscureText: isPassword ? !isPasswordVisible : false,
+        keyboardType: keyboardType,
+        focusNode: focusNode,
+        textInputAction: textInputAction,
+        onFieldSubmitted: onFieldSubmitted,
+        validator: validator,
+        style: GoogleFonts.poppins(),
+        decoration: InputDecoration(
+          prefixIcon: Padding(
+            padding: const EdgeInsets.all(12),
+            child: SizedBox(
+              height: 20,
+              width: 20,
+              child: HugeIcon(icon: icon, color: Colors.grey, size: 20),
+            ),
+          ),
+          hintText: hint,
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(
+            vertical: 18,
+            horizontal: 16,
+          ),
+          suffixIcon: isPassword
+              ? IconButton(
+                  icon: Icon(
+                    isPasswordVisible ? Feather.eye : Feather.eye_off,
+                    size: 22,
+                    color: Colors.grey,
+                  ),
+                  onPressed: onVisibilityChanged,
+                )
+              : null,
         ),
       ),
     );
