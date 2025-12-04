@@ -109,7 +109,9 @@ class _BuyTicketScreenState extends State<BuyTicketScreen> {
     return await showDialog<bool>(
           context: context,
           builder: (context) => AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
             title: Text(
               'Pay with Swift Balance?',
               style: GoogleFonts.poppins(fontWeight: FontWeight.w700),
@@ -118,19 +120,30 @@ class _BuyTicketScreenState extends State<BuyTicketScreen> {
               'Are you sure you want to use your Swift balance for this ticket?',
               style: GoogleFonts.poppins(color: Colors.grey[700]),
             ),
-            actionsPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            actionsPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 8,
+            ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(false),
-                child: Text('Cancel', style: GoogleFonts.poppins(color: Colors.grey)),
+                child: Text(
+                  'Cancel',
+                  style: GoogleFonts.poppins(color: Colors.grey),
+                ),
               ),
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
                 onPressed: () => Navigator.of(context).pop(true),
-                child: Text('Confirm', style: GoogleFonts.poppins(color: Colors.white)),
+                child: Text(
+                  'Confirm',
+                  style: GoogleFonts.poppins(color: Colors.white),
+                ),
               ),
             ],
           ),
@@ -205,7 +218,10 @@ class _BuyTicketScreenState extends State<BuyTicketScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: Text('Done', style: GoogleFonts.poppins(color: AppColors.primary)),
+            child: Text(
+              'Done',
+              style: GoogleFonts.poppins(color: AppColors.primary),
+            ),
           ),
         ],
       ),
@@ -783,11 +799,22 @@ class _BuyTicketScreenState extends State<BuyTicketScreen> {
             borderRadius: BorderRadius.circular(16),
           ),
           child: InkWell(
-            onTap: () => provider.buyTicket(
-              context,
-              paymentMethod: "gateway",
-              quantity: _ticketQuantity,
-            ),
+            onTap: () async {
+              final success = await provider.buyTicket(
+                context,
+                paymentMethod: "gateway",
+                quantity: _ticketQuantity,
+              );
+              if (success && mounted) {
+                _departureController.clear();
+                _destinationController.clear();
+                setState(() {
+                  _showDepartureSuggestions = false;
+                  _showDestinationSuggestions = false;
+                  _ticketQuantity = 1;
+                });
+              }
+            },
             borderRadius: BorderRadius.circular(16),
             child: Padding(
               padding: const EdgeInsets.all(16),
@@ -849,6 +876,13 @@ class _BuyTicketScreenState extends State<BuyTicketScreen> {
               Navigator.of(context, rootNavigator: true).pop();
 
               if (success && context.mounted) {
+                _departureController.clear();
+                _destinationController.clear();
+                setState(() {
+                  _showDepartureSuggestions = false;
+                  _showDestinationSuggestions = false;
+                  _ticketQuantity = 1;
+                });
                 await _showWalletSuccess(context);
               } else {
                 ScaffoldMessenger.of(context).showSnackBar(

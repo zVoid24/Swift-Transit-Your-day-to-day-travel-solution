@@ -10,6 +10,7 @@ import (
 	"swift_transit/domain"
 	"swift_transit/infra/payment"
 	"swift_transit/infra/rabbitmq"
+	"swift_transit/model"
 	"swift_transit/user"
 	"time"
 
@@ -20,25 +21,31 @@ import (
 	"github.com/skip2/go-qrcode"
 )
 
-type service struct {
-	repo          TicketRepo
-	userRepo      user.UserRepo
-	redis         *redis.Client
-	sslCommerz    *payment.SSLCommerz
-	rabbitMQ      *rabbitmq.RabbitMQ
-	ctx           context.Context
-	publicBaseURL string
+type TransactionRepo interface {
+	Create(t model.Transaction) error
 }
 
-func NewService(repo TicketRepo, userRepo user.UserRepo, redis *redis.Client, sslCommerz *payment.SSLCommerz, rabbitMQ *rabbitmq.RabbitMQ, ctx context.Context, publicBaseURL string) Service {
+type service struct {
+	repo            TicketRepo
+	userRepo        user.UserRepo
+	transactionRepo TransactionRepo
+	redis           *redis.Client
+	sslCommerz      *payment.SSLCommerz
+	rabbitMQ        *rabbitmq.RabbitMQ
+	ctx             context.Context
+	publicBaseURL   string
+}
+
+func NewService(repo TicketRepo, userRepo user.UserRepo, transactionRepo TransactionRepo, redis *redis.Client, sslCommerz *payment.SSLCommerz, rabbitMQ *rabbitmq.RabbitMQ, ctx context.Context, publicBaseURL string) Service {
 	return &service{
-		repo:          repo,
-		userRepo:      userRepo,
-		redis:         redis,
-		sslCommerz:    sslCommerz,
-		rabbitMQ:      rabbitMQ,
-		ctx:           ctx,
-		publicBaseURL: strings.TrimRight(publicBaseURL, "/"),
+		repo:            repo,
+		userRepo:        userRepo,
+		transactionRepo: transactionRepo,
+		redis:           redis,
+		sslCommerz:      sslCommerz,
+		rabbitMQ:        rabbitMQ,
+		ctx:             ctx,
+		publicBaseURL:   strings.TrimRight(publicBaseURL, "/"),
 	}
 }
 
@@ -286,6 +293,10 @@ func (s *service) ValidateTicket(id int64) error {
 	return s.repo.ValidateTicket(id)
 }
 
+func (s *service) CreateTransaction(t model.Transaction) error {
+	return s.transactionRepo.Create(t)
+}
+
 func (s *service) UpdatePaymentStatus(id int64) error {
 	ticket, err := s.repo.Get(id)
 	if err != nil {
@@ -297,7 +308,29 @@ func (s *service) UpdatePaymentStatus(id int64) error {
 		}
 		return fmt.Errorf("payment link already used")
 	}
-	return s.repo.UpdateBatchPaymentStatus(ticket.BatchID, true, "paid", true)
+
+	if err := s.repo.UpdateBatchPaymentStatus(ticket.BatchID, true, "paid", true); err != nil {
+		return err
+	}
+
+	// Calculate total amount for the batch
+	count, err := s.repo.GetBatchCount(ticket.BatchID)
+	if err != nil {
+		// Fallback to 1 if count fails, though it shouldn't
+		count = 1
+	}
+
+	totalAmount := ticket.Fare * float64(count)
+
+	// Create Transaction
+	return s.CreateTransaction(model.Transaction{
+		UserID:        int(ticket.UserId),
+		Amount:        totalAmount,
+		Type:          "purchase",
+		Description:   fmt.Sprintf("Ticket Purchase - %s (x%d)", ticket.BusName, count),
+		PaymentMethod: "Online", // Or "Gateway"
+		CreatedAt:     time.Now(),
+	})
 }
 
 func (s *service) HandlePaymentResult(id int64, status string) (bool, error) {

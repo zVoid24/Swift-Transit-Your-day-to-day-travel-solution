@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"swift_transit/domain"
+	"swift_transit/model"
 )
 
 type BuyTicketRequest struct {
@@ -49,6 +50,7 @@ type Service interface {
 	ValidateTicket(id int64) error
 	GetPaymentStatus(ticketID int64) (string, error)
 	CancelTicket(userID int64, ticketID int64) (float64, error)
+	CreateTransaction(t model.Transaction) error
 }
 
 type TicketRepo interface {
@@ -61,4 +63,5 @@ type TicketRepo interface {
 	CountActiveTicketsByRoute(userId int64, routeId int64) (int, error)
 	UpdateBatchPaymentStatus(batchID string, paid bool, status string, markUsed bool) error
 	CancelTicket(id int64, cancelledAt time.Time, status string) error
+	GetBatchCount(batchID string) (int, error)
 }

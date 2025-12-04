@@ -7,6 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import '../screens/ticket/payment_webview_screen.dart';
+import '../models/transaction_model.dart';
 import '../core/constants.dart';
 
 class DashboardProvider extends ChangeNotifier {
@@ -54,6 +55,47 @@ class DashboardProvider extends ChangeNotifier {
   int ticketLimit = 10;
   int totalTickets = 0;
   bool hasMoreTickets = true;
+
+  // Transactions
+  List<TransactionModel> transactions = [];
+  bool isLoadingTransactions = false;
+
+  Future<void> fetchTransactions() async {
+    isLoadingTransactions = true;
+    notifyListeners();
+
+    final prefs = await SharedPreferences.getInstance();
+    final jwt = prefs.getString('jwt');
+    if (jwt == null) {
+      isLoadingTransactions = false;
+      notifyListeners();
+      return;
+    }
+
+    try {
+      final response = await http.get(
+        Uri.parse('${AppConstants.baseUrl}/transactions'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $jwt',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(response.body);
+        transactions = data
+            .map((json) => TransactionModel.fromJson(json))
+            .toList();
+      } else {
+        debugPrint("Failed to fetch transactions: ${response.statusCode}");
+      }
+    } catch (e) {
+      debugPrint("Error fetching transactions: $e");
+    } finally {
+      isLoadingTransactions = false;
+      notifyListeners();
+    }
+  }
 
   // flags
   bool _isRefreshing = false;
@@ -407,8 +449,9 @@ class DashboardProvider extends ChangeNotifier {
     if (index < 0 || index >= searchedRoutes.length) return;
 
     selectedRoute = searchedRoutes[index];
-    selectedRoutePoints =
-        _extractRoutePoints(selectedRoute?['linestring_geojson']);
+    selectedRoutePoints = _extractRoutePoints(
+      selectedRoute?['linestring_geojson'],
+    );
     final stops = (selectedRoute?['stops'] as List?) ?? [];
     selectedRouteMarkers = _buildMarkersFromStops(stops);
 
@@ -728,14 +771,13 @@ class DashboardProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final uri = Uri.parse('${AppConstants.baseUrl}/route/search')
-          .replace(queryParameters: {'name': trimmed});
+      final uri = Uri.parse(
+        '${AppConstants.baseUrl}/route/search',
+      ).replace(queryParameters: {'name': trimmed});
 
       final response = await http.get(
         uri,
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: {'Content-Type': 'application/json'},
       );
 
       if (response.statusCode == 200) {
@@ -760,7 +802,8 @@ class DashboardProvider extends ChangeNotifier {
         }
       } else {
         debugPrint(
-            'Failed to search routes by name: ${response.statusCode} ${response.body}');
+          'Failed to search routes by name: ${response.statusCode} ${response.body}',
+        );
         searchedRoutes = [];
         selectedRoute = null;
         selectedRoutePoints = [];

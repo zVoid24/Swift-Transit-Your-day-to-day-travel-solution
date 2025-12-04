@@ -15,10 +15,12 @@ import (
 	busHandler "swift_transit/rest/handlers/bus"
 	routeHandler "swift_transit/rest/handlers/route"
 	ticketHandler "swift_transit/rest/handlers/ticket"
+	transactionHandler "swift_transit/rest/handlers/transaction"
 	userHandler "swift_transit/rest/handlers/user"
 	"swift_transit/rest/middlewares"
 	"swift_transit/route"
 	"swift_transit/ticket"
+	"swift_transit/transaction"
 	"swift_transit/user"
 	"swift_transit/utils"
 )
@@ -73,7 +75,12 @@ func Start() {
 	}
 	defer rabbitMQ.Close()
 
-	ticketSvc := ticket.NewService(ticketRepo, userRepo, redisCon, sslCommerz, rabbitMQ, ctx, cnf.PublicBaseURL)
+	// Transaction
+	transactionRepo := repo.NewTransactionRepo(dbCon, utilHandler)
+	transactionSvc := transaction.NewService(transactionRepo)
+	transHandler := transactionHandler.NewHandler(transactionSvc, middlewareHandler, mngr, utilHandler)
+
+	ticketSvc := ticket.NewService(ticketRepo, userRepo, transactionRepo, redisCon, sslCommerz, rabbitMQ, ctx, cnf.PublicBaseURL)
 
 	// Start Ticket Worker
 	ticketWorker := ticket.NewTicketWorker(ticketSvc, rabbitMQ)
@@ -83,10 +90,11 @@ func Start() {
 	hub := location.NewHub()
 	go hub.Run()
 
-	userHandler := userHandler.NewHandler(usrSvc, middlewareHandler, mngr, utilHandler, redisCon, ctx, hub)
-	routeHandler := routeHandler.NewHandler(routeSvc, middlewareHandler, mngr, utilHandler)
-	busHandler := busHandler.NewHandler(busSvc, middlewareHandler, mngr, utilHandler, hub)
-	ticketHandler := ticketHandler.NewHandler(ticketSvc, middlewareHandler, mngr, utilHandler, cnf.PublicBaseURL)
-	handler := rest.NewHandler(cnf, middlewareHandler, userHandler, routeHandler, busHandler, ticketHandler)
+	userHdlr := userHandler.NewHandler(usrSvc, middlewareHandler, mngr, utilHandler, redisCon, ctx, hub)
+	routeHdlr := routeHandler.NewHandler(routeSvc, middlewareHandler, mngr, utilHandler)
+	busHdlr := busHandler.NewHandler(busSvc, middlewareHandler, mngr, utilHandler, hub)
+	ticketHdlr := ticketHandler.NewHandler(ticketSvc, middlewareHandler, mngr, utilHandler, cnf.PublicBaseURL)
+
+	handler := rest.NewHandler(cnf, middlewareHandler, userHdlr, routeHdlr, busHdlr, ticketHdlr, transHandler)
 	handler.Serve()
 }

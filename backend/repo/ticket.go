@@ -159,3 +159,10 @@ func (r *ticketRepo) ValidateTicket(id int64) error {
 	_, err := r.dbCon.Exec(query, id)
 	return err
 }
+
+func (r *ticketRepo) GetBatchCount(batchID string) (int, error) {
+	var count int
+	query := `SELECT COUNT(*) FROM tickets WHERE batch_id = $1`
+	err := r.dbCon.Get(&count, query, batchID)
+	return count, err
+}

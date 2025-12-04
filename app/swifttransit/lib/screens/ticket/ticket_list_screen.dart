@@ -27,9 +27,9 @@ class _TicketListScreenState extends State<TicketListScreen> {
 
   Future<void> _refresh() async {
     await context.read<DashboardProvider>().fetchTickets(
-          page: 1,
-          append: false,
-        );
+      page: 1,
+      append: false,
+    );
   }
 
   void _onNavTap(int index) {
@@ -76,40 +76,70 @@ class _TicketListScreenState extends State<TicketListScreen> {
   }
 
   int _createdAtMillis(Map<String, dynamic> ticket) {
-    return DateTime.tryParse(ticket['created_at']?.toString() ?? '')
-            ?.millisecondsSinceEpoch ??
+    return DateTime.tryParse(
+          ticket['created_at']?.toString() ?? '',
+        )?.millisecondsSinceEpoch ??
         0;
   }
 
-  _TicketStatus _deriveStatus(List<Map<String, dynamic>> group) {
-    if (group.any((t) => t['cancelled_at'] != null)) {
-      return _TicketStatus('Cancelled', Colors.red.shade600);
+  Map<String, int> _getStatusCounts(List<Map<String, dynamic>> group) {
+    int cancelled = 0;
+    int completed = 0;
+    int upcoming = 0;
+    int unpaid = 0;
+
+    for (var t in group) {
+      if (t['cancelled_at'] != null) {
+        cancelled++;
+      } else if (t['checked'] == true) {
+        completed++;
+      } else if (t['paid_status'] == true) {
+        upcoming++;
+      } else {
+        unpaid++;
+      }
     }
-    if (group.any((t) => t['checked'] == true)) {
-      return _TicketStatus('Checked', Colors.green.shade600);
-    }
-    if (group.every((t) => t['paid_status'] == true)) {
-      return _TicketStatus('Upcoming', Colors.amber.shade700);
-    }
-    return _TicketStatus('Unpaid', Colors.grey.shade600);
+
+    return {
+      'Cancelled': cancelled,
+      'Completed': completed,
+      'Upcoming': upcoming,
+      'Unpaid': unpaid,
+    };
   }
 
-  Widget _statusChip(_TicketStatus status, int count) {
-    final label = count > 1 ? '${status.label} • $count' : status.label;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: status.color.withOpacity(0.12),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: status.color,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
-    );
+  Widget _statusChips(Map<String, int> counts) {
+    List<Widget> chips = [];
+
+    void addChip(String label, int count, Color color) {
+      if (count > 0) {
+        chips.add(
+          Container(
+            margin: const EdgeInsets.only(bottom: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              '$label $count',
+              style: TextStyle(
+                color: color,
+                fontWeight: FontWeight.w700,
+                fontSize: 12,
+              ),
+            ),
+          ),
+        );
+      }
+    }
+
+    addChip('Upcoming', counts['Upcoming']!, Colors.amber.shade700);
+    addChip('Completed', counts['Completed']!, Colors.green.shade600);
+    addChip('Cancelled', counts['Cancelled']!, Colors.red.shade600);
+    addChip('Unpaid', counts['Unpaid']!, Colors.grey.shade600);
+
+    return Column(crossAxisAlignment: CrossAxisAlignment.end, children: chips);
   }
 
   Widget _infoPill(IconData icon, String label) {
@@ -159,9 +189,9 @@ class _TicketListScreenState extends State<TicketListScreen> {
                         onPressed: provider.isLoadingMoreTickets
                             ? null
                             : () => provider.fetchTickets(
-                                  page: provider.ticketPage + 1,
-                                  append: true,
-                                ),
+                                page: provider.ticketPage + 1,
+                                append: true,
+                              ),
                         child: provider.isLoadingMoreTickets
                             ? const SizedBox(
                                 width: 18,
@@ -179,15 +209,20 @@ class _TicketListScreenState extends State<TicketListScreen> {
                 final group = groupedTickets[index];
                 if (group.isEmpty) return const SizedBox.shrink();
                 final sortedGroup = [...group]
-                  ..sort((a, b) => _createdAtMillis(b).compareTo(_createdAtMillis(a)));
+                  ..sort(
+                    (a, b) =>
+                        _createdAtMillis(b).compareTo(_createdAtMillis(a)),
+                  );
                 final primary = sortedGroup.first;
 
-                final status = _deriveStatus(sortedGroup);
+                final statusCounts = _getStatusCounts(sortedGroup);
                 final start = primary['start_destination'] ?? 'Start';
                 final end = primary['end_destination'] ?? 'End';
                 final busName = primary['bus_name'] ?? 'Swift Bus';
                 final fare = (primary['fare'] as num?)?.toDouble();
-                final totalFare = fare != null ? fare * sortedGroup.length : null;
+                final totalFare = fare != null
+                    ? fare * sortedGroup.length
+                    : null;
 
                 return Card(
                   margin: const EdgeInsets.only(bottom: 12),
@@ -217,7 +252,10 @@ class _TicketListScreenState extends State<TicketListScreen> {
                           Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Icon(Icons.alt_route, color: Colors.black87),
+                              const Icon(
+                                Icons.alt_route,
+                                color: Colors.black87,
+                              ),
                               const SizedBox(width: 10),
                               Expanded(
                                 child: Column(
@@ -241,14 +279,17 @@ class _TicketListScreenState extends State<TicketListScreen> {
                                   ],
                                 ),
                               ),
-                              _statusChip(status, sortedGroup.length),
+                              _statusChips(statusCounts),
                             ],
                           ),
                           const SizedBox(height: 12),
                           Row(
                             children: [
-                              Icon(Icons.directions_bus,
-                                  color: Colors.grey.shade700, size: 18),
+                              Icon(
+                                Icons.directions_bus,
+                                color: Colors.grey.shade700,
+                                size: 18,
+                              ),
                               const SizedBox(width: 6),
                               Expanded(
                                 child: Text(
@@ -287,10 +328,7 @@ class _TicketListScreenState extends State<TicketListScreen> {
         },
       ),
       bottomNavigationBar: widget.showBottomNav
-          ? AppBottomNav(
-              currentIndex: 2,
-              onItemSelected: _onNavTap,
-            )
+          ? AppBottomNav(currentIndex: 2, onItemSelected: _onNavTap)
           : null,
     );
   }

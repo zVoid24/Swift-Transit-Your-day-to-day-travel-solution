@@ -8,6 +8,7 @@ import (
 
 	"swift_transit/domain"
 	"swift_transit/infra/rabbitmq"
+	"swift_transit/model"
 
 	"github.com/google/uuid"
 )
@@ -174,6 +175,19 @@ func (w *TicketWorker) ProcessTicket(req TicketRequestMessage, trackingID string
 	}
 
 	if req.PaymentMethod == "wallet" {
+		// Create Transaction
+		err := s.CreateTransaction(model.Transaction{
+			UserID:        int(req.UserId),
+			Amount:        req.TotalFare,
+			Type:          "purchase",
+			Description:   fmt.Sprintf("Ticket Purchase - %s (x%d)", req.BusName, req.Quantity),
+			PaymentMethod: "Swift Balance",
+			CreatedAt:     time.Now(),
+		})
+		if err != nil {
+			log.Printf("Failed to create transaction: %v", err)
+		}
+
 		statusData := map[string]interface{}{
 			"status":     "paid",
 			"url":        fmt.Sprintf("/ticket/download?id=%d", ticketIDs[0]),
@@ -182,7 +196,6 @@ func (w *TicketWorker) ProcessTicket(req TicketRequestMessage, trackingID string
 		}
 		statusJSON, _ := json.Marshal(statusData)
 		s.redis.Set(s.ctx, fmt.Sprintf("ticket_status:%s", trackingID), statusJSON, 1*time.Hour)
-
 	} else {
 		tranID := fmt.Sprintf("TICKET-%d-%s", ticketIDs[0], batchID[:8])
 		successUrl := fmt.Sprintf("%s/ticket/payment/success?id=%d", baseURL, ticketIDs[0])

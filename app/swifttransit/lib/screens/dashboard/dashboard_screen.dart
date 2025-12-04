@@ -5,7 +5,7 @@ import '../../../core/colors.dart';
 
 import '../../providers/dashboard_provider.dart';
 import '../profile/profile_screen.dart';
-import '../search/search_screen.dart';
+import '../transaction/transaction_screen.dart';
 import '../ticket/buy_ticket_screen.dart';
 import '../ticket/live_bus_location_screen.dart';
 import '../ticket/ticket_list_screen.dart';
@@ -36,12 +36,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   final List<Widget> _screens = const [
     _DashboardContent(),
-    SearchScreen(showBottomNav: false),
+    const TransactionScreen(),
     TicketListScreen(showBottomNav: false),
     DemoProfileScreen(),
   ];
 
   void _onItemTapped(int index) {
+    if (index == 1) {
+      Provider.of<DashboardProvider>(
+        context,
+        listen: false,
+      ).fetchTransactions();
+    }
     setState(() {
       _currentIndex = index;
     });

@@ -36,7 +36,7 @@ class AppBottomNav extends StatelessWidget {
             color: Colors.grey[600],
             tabs: const [
               GButton(icon: Icons.home_rounded, text: 'Home'),
-              GButton(icon: Icons.search_rounded, text: 'Search'),
+              GButton(icon: Icons.receipt_long_rounded, text: 'Transactions'),
               GButton(
                 icon: Icons.confirmation_number_rounded,
                 text: 'My Ticket',
