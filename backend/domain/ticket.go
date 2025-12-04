@@ -12,4 +12,10 @@ type Ticket struct {
 	Checked          bool    `json:"checked" db:"checked"`
 	QRCode           string  `json:"qr_code" db:"qr_code"`
 	CreatedAt        string  `json:"created_at" db:"created_at"`
+	BatchID          string  `json:"batch_id" db:"batch_id"`
+	PaymentMethod    string  `json:"payment_method" db:"payment_method"`
+	PaymentReference string  `json:"payment_reference" db:"payment_reference"`
+	PaymentUsed      bool    `json:"payment_used" db:"payment_used"`
+	PaymentStatus    string  `json:"payment_status" db:"payment_status"`
+	CancelledAt      *string `json:"cancelled_at,omitempty" db:"cancelled_at"`
 }

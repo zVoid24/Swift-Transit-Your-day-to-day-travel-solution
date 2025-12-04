@@ -48,7 +48,11 @@ func (svc *service) Find(mobile string, password string) (*domain.User, error) {
 }
 
 func (svc *service) DeductBalance(id int64, amount float64) error {
-	return svc.userRepo.DeductBalance(id, amount)
+        return svc.userRepo.DeductBalance(id, amount)
+}
+
+func (svc *service) CreditBalance(id int64, amount float64) error {
+        return svc.userRepo.CreditBalance(id, amount)
 }
 
 func (svc *service) UpdatePassword(email, newPassword string) error {

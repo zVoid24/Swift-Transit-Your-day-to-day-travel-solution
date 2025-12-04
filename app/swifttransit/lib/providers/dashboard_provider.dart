@@ -389,6 +389,7 @@ class DashboardProvider extends ChangeNotifier {
   Future<bool> buyTicket(
     BuildContext context, {
     String paymentMethod = "gateway",
+    int quantity = 1,
   }) async {
     if (confirmedDeparture == null || confirmedDestination == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -434,6 +435,7 @@ class DashboardProvider extends ChangeNotifier {
           'start_destination': confirmedDeparture,
           'end_destination': confirmedDestination,
           'payment_method': normalizedMethod,
+          'quantity': quantity,
         }),
       );
 
@@ -705,5 +707,30 @@ class DashboardProvider extends ChangeNotifier {
       debugPrint("Error launching URL: $e");
       return false;
     }
+  }
+
+  Future<bool> cancelTicket(int ticketId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final jwt = prefs.getString('jwt');
+    if (jwt == null) return false;
+
+    try {
+      final response = await http.post(
+        Uri.parse('${AppConstants.baseUrl}/ticket/$ticketId/cancel'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $jwt',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        await fetchTickets(page: 1, append: false);
+        await fetchUserInfo();
+        return true;
+      }
+    } catch (e) {
+      debugPrint('Error cancelling ticket: $e');
+    }
+    return false;
   }
 }

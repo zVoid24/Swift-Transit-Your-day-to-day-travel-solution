@@ -55,6 +55,14 @@ func (svc *service) ValidateTicket(ticketID int64, routeID int64) error {
 		return err
 	}
 
+	if ticket.CancelledAt != nil {
+		return fmt.Errorf("ticket has been cancelled")
+	}
+
+	if !ticket.PaidStatus {
+		return fmt.Errorf("ticket is unpaid")
+	}
+
 	// 2. Check if ticket belongs to the route
 	if ticket.RouteId != routeID {
 		return fmt.Errorf("ticket is not valid for this route")

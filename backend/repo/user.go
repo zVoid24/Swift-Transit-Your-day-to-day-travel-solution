@@ -141,6 +141,11 @@ func (r *userRepo) DeductBalance(id int64, amount float64) error {
 	return tx.Commit()
 }
 
+func (r *userRepo) CreditBalance(id int64, amount float64) error {
+	_, err := r.dbCon.Exec("UPDATE users SET balance = balance + $1 WHERE id = $2", amount, id)
+	return err
+}
+
 func (r *userRepo) UpdatePassword(email, newPassword string) error {
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
 	if err != nil {

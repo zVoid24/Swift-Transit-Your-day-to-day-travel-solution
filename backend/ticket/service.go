@@ -48,11 +48,31 @@ func (s *service) BuyTicket(req BuyTicketRequest) (*BuyTicketResponse, error) {
 		return nil, fmt.Errorf("invalid request")
 	}
 
+	if req.Quantity == 0 {
+		req.Quantity = 1
+	}
+
+	if req.Quantity < 1 || req.Quantity > 4 {
+		return nil, fmt.Errorf("you can purchase between 1 and 4 tickets per request")
+	}
+
 	// 2. Calculate Fare
 	fare, err := s.repo.CalculateFare(req.RouteId, req.StartDestination, req.EndDestination)
 	if err != nil {
 		return nil, fmt.Errorf("failed to calculate fare: %w", err)
 	}
+
+	existing, err := s.repo.CountActiveTicketsByRoute(req.UserId, req.RouteId)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check existing tickets: %w", err)
+	}
+
+	if existing+req.Quantity > 4 {
+		return nil, fmt.Errorf("ticket limit reached for this route (max 4) ")
+	}
+
+	batchID := uuid.New().String()
+	totalFare := fare * float64(req.Quantity)
 
 	// 3. Create a temporary ID or use a UUID for tracking the request
 	// For simplicity, we might need to generate an ID here or let the worker handle it.
@@ -71,6 +91,9 @@ func (s *service) BuyTicket(req BuyTicketRequest) (*BuyTicketResponse, error) {
 		StartDestination: req.StartDestination,
 		EndDestination:   req.EndDestination,
 		Fare:             fare,
+		TotalFare:        totalFare,
+		Quantity:         req.Quantity,
+		BatchID:          batchID,
 		PaymentMethod:    req.PaymentMethod,
 	}
 	reqJSON, err := json.Marshal(msg)
@@ -130,6 +153,15 @@ func (s *service) GetTicketStatus(trackingID string) (*BuyTicketResponse, error)
 			ticketID = int64(tid)
 		}
 
+		var ticketIDs []int64
+		if ids, ok := statusData["ticket_ids"].([]interface{}); ok {
+			for _, raw := range ids {
+				if val, ok := raw.(float64); ok {
+					ticketIDs = append(ticketIDs, int64(val))
+				}
+			}
+		}
+
 		resp := &BuyTicketResponse{
 			Message: status,
 		}
@@ -140,11 +172,17 @@ func (s *service) GetTicketStatus(trackingID string) (*BuyTicketResponse, error)
 			if ticketID != 0 {
 				resp.Ticket = &domain.Ticket{Id: ticketID}
 			}
+			if len(ticketIDs) > 0 {
+				resp.TicketIDs = ticketIDs
+			}
 		} else if status == "paid" {
 			resp.DownloadURL = url
 			resp.Message = "Paid"
 			if ticketID != 0 {
 				resp.Ticket = &domain.Ticket{Id: ticketID}
+			}
+			if len(ticketIDs) > 0 {
+				resp.TicketIDs = ticketIDs
 			}
 		} else if status == "failed" {
 			resp.Message = "Failed"
@@ -176,6 +214,18 @@ func (s *service) GetPaymentStatus(ticketID int64) (string, error) {
 	ticket, err := s.repo.Get(ticketID)
 	if err != nil {
 		return "", err
+	}
+	if ticket.CancelledAt != nil {
+		return "cancelled", nil
+	}
+	if ticket.PaymentStatus != "" {
+		if ticket.PaymentStatus == "paid" {
+			return "paid", nil
+		}
+		if ticket.PaymentUsed && ticket.PaymentStatus != "paid" {
+			return "failed", nil
+		}
+		return ticket.PaymentStatus, nil
 	}
 	if ticket.PaidStatus {
 		return "paid", nil
@@ -221,11 +271,46 @@ func (s *service) ValidatePayment(valID string, tranID string, amount float64) (
 }
 
 func (s *service) ValidateTicket(id int64) error {
+	ticket, err := s.repo.Get(id)
+	if err != nil {
+		return err
+	}
+	if ticket.CancelledAt != nil {
+		return fmt.Errorf("ticket has been cancelled")
+	}
 	return s.repo.ValidateTicket(id)
 }
 
 func (s *service) UpdatePaymentStatus(id int64) error {
-	return s.repo.UpdateStatus(id, true)
+	ticket, err := s.repo.Get(id)
+	if err != nil {
+		return err
+	}
+	if ticket.PaymentUsed {
+		if ticket.PaidStatus {
+			return nil
+		}
+		return fmt.Errorf("payment link already used")
+	}
+	return s.repo.UpdateBatchPaymentStatus(ticket.BatchID, true, "paid", true)
+}
+
+func (s *service) HandlePaymentResult(id int64, status string) (bool, error) {
+	ticket, err := s.repo.Get(id)
+	if err != nil {
+		return false, err
+	}
+
+	if ticket.PaymentUsed {
+		return true, fmt.Errorf("payment link already processed")
+	}
+
+	paid := status == "paid"
+	if err := s.repo.UpdateBatchPaymentStatus(ticket.BatchID, paid, status, true); err != nil {
+		return false, err
+	}
+
+	return false, nil
 }
 
 func (s *service) DownloadTicket(id int64) ([]byte, error) {
@@ -233,6 +318,14 @@ func (s *service) DownloadTicket(id int64) ([]byte, error) {
 	ticket, err := s.repo.Get(id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get ticket: %w", err)
+	}
+
+	if ticket.CancelledAt != nil {
+		return nil, fmt.Errorf("ticket has been cancelled")
+	}
+
+	if !ticket.PaidStatus {
+		return nil, fmt.Errorf("ticket is unpaid")
 	}
 
 	// Generate QR Code
@@ -285,4 +378,52 @@ func (s *service) DownloadTicket(id int64) ([]byte, error) {
 
 func (s *service) GetByUserID(userId int64, limit, offset int) ([]domain.Ticket, int, error) {
 	return s.repo.GetByUserID(userId, limit, offset)
+}
+
+func (s *service) CancelTicket(userID int64, ticketID int64) (float64, error) {
+	ticket, err := s.repo.Get(ticketID)
+	if err != nil {
+		return 0, err
+	}
+
+	if ticket.UserId != userID {
+		return 0, fmt.Errorf("unauthorized")
+	}
+
+	if ticket.CancelledAt != nil {
+		return 0, fmt.Errorf("ticket already cancelled")
+	}
+
+	if ticket.Checked {
+		return 0, fmt.Errorf("ticket already used")
+	}
+
+	if !ticket.PaidStatus {
+		return 0, fmt.Errorf("unpaid tickets cannot be cancelled")
+	}
+
+	parsedTime, err := time.Parse(time.RFC3339, ticket.CreatedAt)
+	if err != nil {
+		parsedTime, _ = time.Parse("2006-01-02 15:04:05", ticket.CreatedAt)
+	}
+
+	if !parsedTime.IsZero() {
+		if time.Since(parsedTime) > 24*time.Hour {
+			return 0, fmt.Errorf("cancellation window (24h) has expired")
+		}
+	}
+
+	refundAmount := ticket.Fare * 0.75
+
+	if err := s.repo.CancelTicket(ticketID, time.Now(), "cancelled"); err != nil {
+		return 0, err
+	}
+
+	if ticket.PaymentMethod == "wallet" {
+		if err := s.userRepo.CreditBalance(ticket.UserId, refundAmount); err != nil {
+			return 0, err
+		}
+	}
+
+	return refundAmount, nil
 }

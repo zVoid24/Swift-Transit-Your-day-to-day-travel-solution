@@ -11,4 +11,5 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.Handle("GET /ticket/download", h.mngr.With(http.HandlerFunc(h.DownloadTicket)))
 	mux.Handle("GET /ticket/status", h.mngr.With(http.HandlerFunc(h.GetTicketStatus)))
 	mux.Handle("GET /ticket", h.mngr.With(http.HandlerFunc(h.GetTickets), h.middlewareHandler.Authenticate))
+	mux.Handle("POST /ticket/{id}/cancel", h.mngr.With(http.HandlerFunc(h.CancelTicket), h.middlewareHandler.Authenticate))
 }
