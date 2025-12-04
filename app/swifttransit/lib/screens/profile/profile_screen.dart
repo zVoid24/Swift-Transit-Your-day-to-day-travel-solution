@@ -55,13 +55,16 @@ class _DemoProfileScreenState extends State<DemoProfileScreen> {
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(success ? 'Profile updated' : 'Update failed. Please try again.'),
+        content: Text(
+          success ? 'Profile updated' : 'Update failed. Please try again.',
+        ),
       ),
     );
   }
 
   Future<void> _submitPassword() async {
-    if (_newPasswordController.text.trim() != _confirmPasswordController.text.trim()) {
+    if (_newPasswordController.text.trim() !=
+        _confirmPasswordController.text.trim()) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('New passwords do not match')),
       );
@@ -77,7 +80,11 @@ class _DemoProfileScreenState extends State<DemoProfileScreen> {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(success ? 'Password changed successfully' : 'Unable to change password'),
+        content: Text(
+          success
+              ? 'Password changed successfully'
+              : 'Unable to change password',
+        ),
       ),
     );
 
@@ -118,20 +125,28 @@ class _DemoProfileScreenState extends State<DemoProfileScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _ProfileHeader(name: user?['name'] ?? 'User', email: user?['email'] ?? ''),
+                  _ProfileHeader(
+                    name: user?['name'] ?? 'User',
+                    email: user?['email'] ?? '',
+                  ),
                   const SizedBox(height: 16),
                   _InfoTile(
                     title: 'Account Info',
                     subtitle:
                         '${user?['mobile'] ?? 'Unknown'} • ${user?['email'] ?? 'No email'}',
-                    trailing: Chip(
-                      label: Text('Balance: ৳${(user?['balance'] ?? 0).toString()}'),
-                      backgroundColor: AppColors.primary.withOpacity(0.12),
-                      labelStyle: TextStyle(color: AppColors.primary),
-                    ),
+                    // trailing: Chip(
+                    //   label: Text('Balance: ৳${(user?['balance'] ?? 0).toString()}'),
+                    //   backgroundColor: AppColors.primary.withOpacity(0.12),
+                    //   labelStyle: TextStyle(color: AppColors.primary),
+                    // ),
                   ),
                   const SizedBox(height: 20),
-                  Text('Edit Profile', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                  Text(
+                    'Edit Profile',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                   const SizedBox(height: 10),
                   _buildTextField(_nameController, 'Full Name', Icons.person),
                   const SizedBox(height: 10),
@@ -146,36 +161,71 @@ class _DemoProfileScreenState extends State<DemoProfileScreen> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary,
                         padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
-                      child: const Text('Save Changes', style: TextStyle(color: Colors.white)),
+                      child: const Text(
+                        'Save Changes',
+                        style: TextStyle(color: Colors.white),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 24),
-                  Text('Change Password', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                  Text(
+                    'Change Password',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                   const SizedBox(height: 10),
-                  _buildTextField(_currentPasswordController, 'Current Password', Icons.lock_outline, obscure: true),
+                  _buildTextField(
+                    _currentPasswordController,
+                    'Current Password',
+                    Icons.lock_outline,
+                    obscure: true,
+                  ),
                   const SizedBox(height: 10),
-                  _buildTextField(_newPasswordController, 'New Password', Icons.lock, obscure: true),
+                  _buildTextField(
+                    _newPasswordController,
+                    'New Password',
+                    Icons.lock,
+                    obscure: true,
+                  ),
                   const SizedBox(height: 10),
-                  _buildTextField(_confirmPasswordController, 'Confirm New Password', Icons.lock_reset, obscure: true),
+                  _buildTextField(
+                    _confirmPasswordController,
+                    'Confirm New Password',
+                    Icons.lock_reset,
+                    obscure: true,
+                  ),
                   const SizedBox(height: 10),
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: auth.isChangingPassword ? null : _submitPassword,
+                      onPressed: auth.isChangingPassword
+                          ? null
+                          : _submitPassword,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary,
                         padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
                       child: auth.isChangingPassword
                           ? const SizedBox(
                               width: 18,
                               height: 18,
-                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
                             )
-                          : const Text('Update Password', style: TextStyle(color: Colors.white)),
+                          : const Text(
+                              'Update Password',
+                              style: TextStyle(color: Colors.white),
+                            ),
                     ),
                   ),
                   const SizedBox(height: 24),
@@ -186,7 +236,9 @@ class _DemoProfileScreenState extends State<DemoProfileScreen> {
                           context: context,
                           builder: (context) => AlertDialog(
                             title: const Text('Logout'),
-                            content: const Text('Are you sure you want to logout?'),
+                            content: const Text(
+                              'Are you sure you want to logout?',
+                            ),
                             actions: [
                               TextButton(
                                 onPressed: () => Navigator.pop(context, false),
@@ -206,14 +258,22 @@ class _DemoProfileScreenState extends State<DemoProfileScreen> {
                         if (confirm == true && mounted) {
                           await auth.logout();
                           if (mounted) {
-                            Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+                            Navigator.pushNamedAndRemoveUntil(
+                              context,
+                              '/login',
+                              (route) => false,
+                            );
                           }
                         }
                       },
                       icon: const Icon(Icons.logout, color: Colors.red),
                       label: const Text(
                         'Log Out',
-                        style: TextStyle(fontSize: 16, color: Colors.red, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.red,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ),
@@ -223,7 +283,12 @@ class _DemoProfileScreenState extends State<DemoProfileScreen> {
     );
   }
 
-  Widget _buildTextField(TextEditingController controller, String label, IconData icon, {bool obscure = false}) {
+  Widget _buildTextField(
+    TextEditingController controller,
+    String label,
+    IconData icon, {
+    bool obscure = false,
+  }) {
     return TextField(
       controller: controller,
       obscureText: obscure,
@@ -232,7 +297,10 @@ class _DemoProfileScreenState extends State<DemoProfileScreen> {
         labelText: label,
         filled: true,
         fillColor: Colors.grey.shade100,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
       ),
     );
   }
@@ -251,7 +319,10 @@ class _ProfileHeader extends StatelessWidget {
         CircleAvatar(
           radius: 32,
           backgroundColor: AppColors.primary.withOpacity(0.2),
-          child: Text(name.isNotEmpty ? name[0].toUpperCase() : 'U', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+          child: Text(
+            name.isNotEmpty ? name[0].toUpperCase() : 'U',
+            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+          ),
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -260,7 +331,10 @@ class _ProfileHeader extends StatelessWidget {
             children: [
               Text(
                 name,
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               const SizedBox(height: 4),
               Text(email, style: const TextStyle(color: Colors.black54)),

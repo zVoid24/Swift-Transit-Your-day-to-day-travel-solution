@@ -224,7 +224,7 @@ class _BalanceCard extends StatelessWidget {
       ),
       builder: (ctx) {
         return StatefulBuilder(
-          builder: (context, setState) {
+          builder: (sheetContext, setState) {
             return Padding(
               padding: const EdgeInsets.all(16.0),
               child: Column(
@@ -233,11 +233,17 @@ class _BalanceCard extends StatelessWidget {
                 children: [
                   Row(
                     children: const [
-                      Icon(Icons.account_balance_wallet_rounded, color: Colors.black87),
+                      Icon(
+                        Icons.account_balance_wallet_rounded,
+                        color: Colors.black87,
+                      ),
                       SizedBox(width: 8),
                       Text(
                         'Select recharge amount',
-                        style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 16,
+                        ),
                       ),
                     ],
                   ),
@@ -250,10 +256,13 @@ class _BalanceCard extends StatelessWidget {
                       return ChoiceChip(
                         label: Text('৳$amount'),
                         selected: isSelected,
-                        onSelected: (_) => setState(() => selectedAmount = amount),
+                        onSelected: (_) =>
+                            setState(() => selectedAmount = amount),
                         selectedColor: AppColors.primary.withOpacity(0.15),
                         labelStyle: TextStyle(
-                          color: isSelected ? AppColors.primary : Colors.black87,
+                          color: isSelected
+                              ? AppColors.primary
+                              : Colors.black87,
                           fontWeight: FontWeight.w600,
                         ),
                       );
@@ -268,23 +277,34 @@ class _BalanceCard extends StatelessWidget {
                           onPressed: provider.isRecharging
                               ? null
                               : () async {
-                                  Navigator.of(context).pop();
-                                  await provider.startRecharge(context, selectedAmount);
+                                  Navigator.of(sheetContext).pop();
+                                  await provider.startRecharge(
+                                    context,
+                                    selectedAmount,
+                                  );
                                 },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.primary,
                             padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
                           ),
                           child: provider.isRecharging
                               ? const SizedBox(
                                   height: 18,
                                   width: 18,
-                                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
                                 )
                               : const Text(
                                   'Proceed to pay',
-                                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                         ),
                       );
@@ -360,12 +380,12 @@ class _BalanceCard extends StatelessWidget {
                 ),
               ),
 
-          // Recharge button (primary)
-          ElevatedButton.icon(
-            onPressed: () => _openRechargeSheet(context),
-            icon: Icon(
-              Icons.account_balance_wallet_rounded,
-              size: 18,
+              // Recharge button (primary)
+              ElevatedButton.icon(
+                onPressed: () => _openRechargeSheet(context),
+                icon: Icon(
+                  Icons.account_balance_wallet_rounded,
+                  size: 18,
                   color: Colors.white,
                 ),
                 label: Text(
@@ -525,7 +545,10 @@ class _ServiceSelector extends StatelessWidget {
           );
         }),
         _tile(context, 'Track Bus', Icons.track_changes, () {
-          final provider = Provider.of<DashboardProvider>(context, listen: false);
+          final provider = Provider.of<DashboardProvider>(
+            context,
+            listen: false,
+          );
           final upcoming = provider.upcomingTickets;
 
           if (upcoming.isEmpty) {
@@ -543,7 +566,8 @@ class _ServiceSelector extends StatelessWidget {
             MaterialPageRoute(
               builder: (_) => LiveBusLocationScreen(
                 routeId: (first['route_id'] as num).toInt(),
-                title: '${first['start_destination']} → ${first['end_destination']}',
+                title:
+                    '${first['start_destination']} → ${first['end_destination']}',
                 busName: first['bus_name'],
                 availableTickets: upcoming,
               ),

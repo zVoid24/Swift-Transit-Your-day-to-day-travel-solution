@@ -156,11 +156,18 @@ class DashboardProvider extends ChangeNotifier {
   List<Map<String, dynamic>> get upcomingTickets {
     return tickets
         .whereType<Map<String, dynamic>>()
-        .where((ticket) => ticket['paid_status'] == true && ticket['checked'] != true)
+        .where(
+          (ticket) =>
+              ticket['paid_status'] == true && ticket['checked'] != true,
+        )
         .toList()
       ..sort((a, b) {
-        final dateA = DateTime.tryParse(a['created_at'] ?? '')?.millisecondsSinceEpoch ?? 0;
-        final dateB = DateTime.tryParse(b['created_at'] ?? '')?.millisecondsSinceEpoch ?? 0;
+        final dateA =
+            DateTime.tryParse(a['created_at'] ?? '')?.millisecondsSinceEpoch ??
+            0;
+        final dateB =
+            DateTime.tryParse(b['created_at'] ?? '')?.millisecondsSinceEpoch ??
+            0;
         return dateB.compareTo(dateA);
       });
   }
@@ -296,7 +303,12 @@ class DashboardProvider extends ChangeNotifier {
           throw Exception('Invalid payment URL');
         }
 
-        if (!context.mounted) return false;
+        if (!context.mounted) {
+          _isRecharging = false;
+          notifyListeners();
+          return false;
+        }
+
         await Navigator.push(
           context,
           MaterialPageRoute(
@@ -306,14 +318,18 @@ class DashboardProvider extends ChangeNotifier {
                 await fetchUserInfo();
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Balance updated successfully.')),
+                    const SnackBar(
+                      content: Text('Balance updated successfully.'),
+                    ),
                   );
                 }
               },
               onFailure: () {
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Recharge was cancelled or failed.')),
+                    const SnackBar(
+                      content: Text('Recharge was cancelled or failed.'),
+                    ),
                   );
                 }
               },

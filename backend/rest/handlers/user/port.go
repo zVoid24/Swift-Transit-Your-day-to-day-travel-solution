@@ -12,4 +12,6 @@ type Service interface {
 	DeductBalance(id int64, amount float64) error
 	UpdatePassword(email, newPassword string) error
 	FindByEmail(email string) (*domain.User, error)
+	UpdateProfile(id int64, name, email, mobile string) (*domain.User, error)
+	ChangePassword(id int64, currentPassword, newPassword string) error
 }
