@@ -2,7 +2,10 @@ package user
 
 import (
 	"context"
+	"fmt"
 	"swift_transit/domain"
+
+	"golang.org/x/crypto/bcrypt"
 )
 
 type service struct {
@@ -48,11 +51,11 @@ func (svc *service) Find(mobile string, password string) (*domain.User, error) {
 }
 
 func (svc *service) DeductBalance(id int64, amount float64) error {
-        return svc.userRepo.DeductBalance(id, amount)
+	return svc.userRepo.DeductBalance(id, amount)
 }
 
 func (svc *service) CreditBalance(id int64, amount float64) error {
-        return svc.userRepo.CreditBalance(id, amount)
+	return svc.userRepo.CreditBalance(id, amount)
 }
 
 func (svc *service) UpdatePassword(email, newPassword string) error {
@@ -61,4 +64,21 @@ func (svc *service) UpdatePassword(email, newPassword string) error {
 
 func (svc *service) FindByEmail(email string) (*domain.User, error) {
 	return svc.userRepo.FindByEmail(email)
+}
+
+func (svc *service) UpdateProfile(id int64, name, email, mobile string) (*domain.User, error) {
+	return svc.userRepo.UpdateProfile(id, name, email, mobile)
+}
+
+func (svc *service) ChangePassword(id int64, currentPassword, newPassword string) error {
+	user, err := svc.userRepo.GetWithPassword(id)
+	if err != nil {
+		return err
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(currentPassword)); err != nil {
+		return fmt.Errorf("current password is incorrect")
+	}
+
+	return svc.userRepo.UpdatePasswordByID(id, newPassword)
 }

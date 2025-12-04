@@ -153,6 +153,18 @@ class DashboardProvider extends ChangeNotifier {
     return result;
   }
 
+  List<Map<String, dynamic>> get upcomingTickets {
+    return tickets
+        .whereType<Map<String, dynamic>>()
+        .where((ticket) => ticket['paid_status'] == true && ticket['checked'] != true)
+        .toList()
+      ..sort((a, b) {
+        final dateA = DateTime.tryParse(a['created_at'] ?? '')?.millisecondsSinceEpoch ?? 0;
+        final dateB = DateTime.tryParse(b['created_at'] ?? '')?.millisecondsSinceEpoch ?? 0;
+        return dateB.compareTo(dateA);
+      });
+  }
+
   final quotes = [
     "Safe journeys begin with patience and careful planning.",
     "Your safety is our priority—enjoy a secure ride with SwiftTransit!",
@@ -251,30 +263,79 @@ class DashboardProvider extends ChangeNotifier {
     }
   }
 
-  /// Simulate a recharge operation that adds [amount] to balance.
-  /// In a real app you'd integrate payment gateway and then call fetchUserInfo on success.
-  Future<bool> recharge(int amount) async {
+  Future<bool> startRecharge(BuildContext context, int amount) async {
     if (_isRecharging) return false;
     _isRecharging = true;
     notifyListeners();
 
     try {
-      // Simulate processing time or call recharge API here
-      await Future.delayed(const Duration(seconds: 1));
+      final prefs = await SharedPreferences.getInstance();
+      final jwt = prefs.getString('jwt');
+      if (jwt == null) {
+        _isRecharging = false;
+        notifyListeners();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please log in to recharge.')),
+        );
+        return false;
+      }
 
-      // For demo: increment balance locally (replace with API response)
-      balance += amount.toDouble();
+      final response = await http.post(
+        Uri.parse('${AppConstants.baseUrl}/wallet/recharge'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $jwt',
+        },
+        body: jsonEncode({'amount': amount}),
+      );
 
-      // Optionally update swift points
-      // swiftPoints += (amount ~/ 100);
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        final paymentUrl = data['gateway_url']?.toString();
+        if (paymentUrl == null || paymentUrl.isEmpty) {
+          throw Exception('Invalid payment URL');
+        }
 
-      _isRecharging = false;
-      notifyListeners();
-      return true;
+        if (!context.mounted) return false;
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => PaymentWebViewScreen(
+              paymentUrl: paymentUrl,
+              onSuccess: () async {
+                await fetchUserInfo();
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Balance updated successfully.')),
+                  );
+                }
+              },
+              onFailure: () {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Recharge was cancelled or failed.')),
+                  );
+                }
+              },
+            ),
+          ),
+        );
+
+        _isRecharging = false;
+        notifyListeners();
+        return true;
+      }
+
+      throw Exception('Failed to start recharge: ${response.body}');
     } catch (e) {
+      debugPrint('recharge error: $e');
       _isRecharging = false;
       notifyListeners();
-      debugPrint('recharge error: $e');
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Recharge failed. Please try again.')),
+        );
+      }
       return false;
     }
   }

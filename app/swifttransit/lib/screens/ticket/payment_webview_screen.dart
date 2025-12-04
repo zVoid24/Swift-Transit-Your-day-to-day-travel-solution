@@ -42,22 +42,33 @@ class _PaymentWebViewScreenState extends State<PaymentWebViewScreen> {
           onPageFinished: (_) => setState(() => _isLoading = false),
           onNavigationRequest: (request) {
             final uri = Uri.tryParse(request.url);
-            if (uri != null && uri.path.contains('/ticket')) {
-              if (uri.path.contains('success')) {
-                // Allow the page to load so user sees the backend HTML
-                // We can still trigger the success callback in the background or after a delay
-                Future.delayed(const Duration(seconds: 1), () {
+            if (uri != null) {
+              if (uri.path.contains('/ticket')) {
+                if (uri.path.contains('success')) {
+                  Future.delayed(const Duration(seconds: 1), () {
+                    widget.onSuccess?.call();
+                  });
+                  return NavigationDecision.navigate;
+                }
+                if (uri.path.contains('fail') || uri.path.contains('cancel')) {
+                  widget.onFailure?.call();
+                  return NavigationDecision.navigate;
+                }
+                if (uri.path.contains('download')) {
+                  launchUrl(uri, mode: LaunchMode.externalApplication);
+                  return NavigationDecision.prevent;
+                }
+              }
+
+              if (uri.path.contains('/wallet/recharge')) {
+                if (uri.path.contains('success')) {
                   widget.onSuccess?.call();
-                });
-                return NavigationDecision.navigate;
-              }
-              if (uri.path.contains('fail') || uri.path.contains('cancel')) {
-                widget.onFailure?.call();
-                return NavigationDecision.navigate;
-              }
-              if (uri.path.contains('download')) {
-                launchUrl(uri, mode: LaunchMode.externalApplication);
-                return NavigationDecision.prevent;
+                  return NavigationDecision.navigate;
+                }
+                if (uri.path.contains('fail') || uri.path.contains('cancel')) {
+                  widget.onFailure?.call();
+                  return NavigationDecision.navigate;
+                }
               }
             }
             return NavigationDecision.navigate;

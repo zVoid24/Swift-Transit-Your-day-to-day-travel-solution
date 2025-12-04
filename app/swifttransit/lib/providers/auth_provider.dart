@@ -8,6 +8,7 @@ class AuthProvider extends ChangeNotifier {
   bool isLoading = false;
   bool isForgotLoading = false;
   bool isResettingPassword = false;
+  bool isChangingPassword = false;
 
   final fullName = TextEditingController();
   final email = TextEditingController();
@@ -142,6 +143,98 @@ class AuthProvider extends ChangeNotifier {
       return true;
     }
     return false;
+  }
+
+  Future<bool> refreshProfile() async {
+    final prefs = await SharedPreferences.getInstance();
+    final jwt = prefs.getString('jwt');
+    if (jwt == null) return false;
+
+    final response = await http.get(
+      Uri.parse('${AppConstants.baseUrl}/user'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $jwt',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      _user = data;
+      await prefs.setString('user', jsonEncode(data));
+      notifyListeners();
+      return true;
+    }
+
+    return false;
+  }
+
+  Future<bool> updateProfile({
+    required String name,
+    required String email,
+    required String mobile,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final jwt = prefs.getString('jwt');
+    if (jwt == null) return false;
+
+    final response = await http.put(
+      Uri.parse('${AppConstants.baseUrl}/user'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $jwt',
+      },
+      body: jsonEncode({
+        'name': name,
+        'email': email,
+        'mobile': mobile,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      _user = data;
+      await prefs.setString('user', jsonEncode(data));
+      notifyListeners();
+      return true;
+    }
+
+    return false;
+  }
+
+  Future<bool> changePassword(String currentPassword, String newPassword) async {
+    isChangingPassword = true;
+    notifyListeners();
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final jwt = prefs.getString('jwt');
+      if (jwt == null) {
+        isChangingPassword = false;
+        notifyListeners();
+        return false;
+      }
+
+      final response = await http.post(
+        Uri.parse('${AppConstants.baseUrl}/auth/change-password'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $jwt',
+        },
+        body: jsonEncode({
+          'current_password': currentPassword,
+          'new_password': newPassword,
+        }),
+      );
+
+      isChangingPassword = false;
+      notifyListeners();
+      return response.statusCode == 200;
+    } catch (_) {
+      isChangingPassword = false;
+      notifyListeners();
+      return false;
+    }
   }
 
   Future<void> logout() async {
