@@ -45,6 +45,14 @@ class _BuyTicketScreenState extends State<BuyTicketScreen> {
 
   void _onSearchChanged(String query, bool isDeparture) async {
     final provider = Provider.of<DashboardProvider>(context, listen: false);
+
+    // Update provider state and clear results
+    if (isDeparture) {
+      provider.setDeparture(query);
+    } else {
+      provider.setDestination(query);
+    }
+
     final suggestions = await provider.searchStops(query);
 
     if (!mounted) return;

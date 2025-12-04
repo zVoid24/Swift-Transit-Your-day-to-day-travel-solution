@@ -24,6 +24,8 @@ class DashboardProvider extends ChangeNotifier {
 
   String? selectedDeparture;
   String? selectedDestination;
+  String? confirmedDeparture;
+  String? confirmedDestination;
 
   // Dynamic data
   String userName = "User";
@@ -130,12 +132,12 @@ class DashboardProvider extends ChangeNotifier {
   // Dropdown Update
   void setDeparture(String? value) {
     selectedDeparture = value;
-    notifyListeners();
+    clearSearchResults();
   }
 
   void setDestination(String? value) {
     selectedDestination = value;
-    notifyListeners();
+    clearSearchResults();
   }
 
   /// Fetch user info (name, balance, maybe points) from server and update local fields.
@@ -287,6 +289,8 @@ class DashboardProvider extends ChangeNotifier {
         }
 
         _setSelectedBus(0);
+        confirmedDeparture = selectedDeparture;
+        confirmedDestination = selectedDestination;
       } else {
         debugPrint("Bus not found: ${response.body}");
         // Clear map if route not found
@@ -356,6 +360,12 @@ class DashboardProvider extends ChangeNotifier {
   void clearSearch() {
     selectedDeparture = null;
     selectedDestination = null;
+    confirmedDeparture = null;
+    confirmedDestination = null;
+    clearSearchResults();
+  }
+
+  void clearSearchResults() {
     currentRouteId = null;
     currentBusName = null;
     selectedBusIndex = null;
@@ -380,11 +390,9 @@ class DashboardProvider extends ChangeNotifier {
     BuildContext context, {
     String paymentMethod = "gateway",
   }) async {
-    if (selectedDeparture == null || selectedDestination == null) {
+    if (confirmedDeparture == null || confirmedDestination == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Please select departure and destination"),
-        ),
+        const SnackBar(content: Text("Please search for a route first")),
       );
       return;
     }
@@ -423,8 +431,8 @@ class DashboardProvider extends ChangeNotifier {
           'user_id': userId,
           'route_id': currentRouteId,
           'bus_name': currentBusName ?? "Swift Bus",
-          'start_destination': selectedDeparture,
-          'end_destination': selectedDestination,
+          'start_destination': confirmedDeparture,
+          'end_destination': confirmedDestination,
           'payment_method': normalizedMethod,
         }),
       );
