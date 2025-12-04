@@ -213,6 +213,97 @@ class _BalanceCard extends StatelessWidget {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 
+  void _openRechargeSheet(BuildContext context) {
+    final amounts = [50, 100, 200, 300, 400, 500];
+    int selectedAmount = amounts.first;
+
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+      ),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: const [
+                      Icon(Icons.account_balance_wallet_rounded, color: Colors.black87),
+                      SizedBox(width: 8),
+                      Text(
+                        'Select recharge amount',
+                        style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 10,
+                    runSpacing: 10,
+                    children: amounts.map((amount) {
+                      final isSelected = amount == selectedAmount;
+                      return ChoiceChip(
+                        label: Text('৳$amount'),
+                        selected: isSelected,
+                        onSelected: (_) => setState(() => selectedAmount = amount),
+                        selectedColor: AppColors.primary.withOpacity(0.15),
+                        labelStyle: TextStyle(
+                          color: isSelected ? AppColors.primary : Colors.black87,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 16),
+                  Consumer<DashboardProvider>(
+                    builder: (context, provider, _) {
+                      return SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: provider.isRecharging
+                              ? null
+                              : () async {
+                                  Navigator.of(context).pop();
+                                  await provider.startRecharge(context, selectedAmount);
+                                },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                          child: provider.isRecharging
+                              ? const SizedBox(
+                                  height: 18,
+                                  width: 18,
+                                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                )
+                              : const Text(
+                                  'Proceed to pay',
+                                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                                ),
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'We support secure payments via SSLCommerz. Amounts are limited to ৳50-৳500 for now.',
+                    style: TextStyle(color: Colors.grey.shade600),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     // Modern minimal card: balance left, recharge & refresh right, points below with arrow
@@ -269,15 +360,12 @@ class _BalanceCard extends StatelessWidget {
                 ),
               ),
 
-              // Recharge button (primary)
-              ElevatedButton.icon(
-                onPressed: () {
-                  // simulate recharge flow
-                  _showSnack(context, 'Recharge tapped (static)');
-                },
-                icon: Icon(
-                  Icons.account_balance_wallet_rounded,
-                  size: 18,
+          // Recharge button (primary)
+          ElevatedButton.icon(
+            onPressed: () => _openRechargeSheet(context),
+            icon: Icon(
+              Icons.account_balance_wallet_rounded,
+              size: 18,
                   color: Colors.white,
                 ),
                 label: Text(
@@ -437,13 +525,10 @@ class _ServiceSelector extends StatelessWidget {
           );
         }),
         _tile(context, 'Track Bus', Icons.track_changes, () {
-          final provider = Provider.of<DashboardProvider>(
-            context,
-            listen: false,
-          );
-          final active = provider.activeTicket;
+          final provider = Provider.of<DashboardProvider>(context, listen: false);
+          final upcoming = provider.upcomingTickets;
 
-          if (active == null) {
+          if (upcoming.isEmpty) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
                 content: Text('No active tickets to track right now.'),
@@ -452,14 +537,15 @@ class _ServiceSelector extends StatelessWidget {
             return;
           }
 
+          final first = upcoming.first;
           Navigator.push(
             context,
             MaterialPageRoute(
               builder: (_) => LiveBusLocationScreen(
-                routeId: (active['route_id'] as num).toInt(),
-                title:
-                    '${active['start_destination']} → ${active['end_destination']}',
-                busName: active['bus_name'],
+                routeId: (first['route_id'] as num).toInt(),
+                title: '${first['start_destination']} → ${first['end_destination']}',
+                busName: first['bus_name'],
+                availableTickets: upcoming,
               ),
             ),
           );
@@ -565,6 +651,7 @@ class _MyTicketCardState extends State<_MyTicketCard> {
                           title:
                               '${t['start_destination']} → ${t['end_destination']}',
                           busName: t['bus_name'],
+                          availableTickets: [t as Map<String, dynamic>],
                         ),
                       ),
                     );

@@ -25,4 +25,8 @@ func NewHandler(svc transaction.Service, middlewareHandler *middlewares.Handler,
 
 func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.Handle("GET /transactions", h.middlewareHandler.Authenticate(http.HandlerFunc(h.GetTransactions)))
+	mux.Handle("POST /wallet/recharge", h.middlewareHandler.Authenticate(http.HandlerFunc(h.InitiateRecharge)))
+	mux.Handle("/wallet/recharge/success", http.HandlerFunc(h.RechargeSuccess))
+	mux.Handle("/wallet/recharge/fail", http.HandlerFunc(h.RechargeFail))
+	mux.Handle("/wallet/recharge/cancel", http.HandlerFunc(h.RechargeCancel))
 }

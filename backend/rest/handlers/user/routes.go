@@ -19,4 +19,6 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 
 	// User Info
 	mux.Handle("GET /user", h.mngr.With(http.HandlerFunc(h.Information), h.middlewareHandler.Authenticate))
+	mux.Handle("PUT /user", h.mngr.With(http.HandlerFunc(h.UpdateProfile), h.middlewareHandler.Authenticate))
+	mux.Handle("POST /auth/change-password", h.mngr.With(http.HandlerFunc(h.ChangePassword), h.middlewareHandler.Authenticate))
 }

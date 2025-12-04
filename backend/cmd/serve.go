@@ -77,7 +77,7 @@ func Start() {
 
 	// Transaction
 	transactionRepo := repo.NewTransactionRepo(dbCon, utilHandler)
-	transactionSvc := transaction.NewService(transactionRepo)
+	transactionSvc := transaction.NewService(transactionRepo, userRepo, sslCommerz, redisCon, cnf.PublicBaseURL)
 	transHandler := transactionHandler.NewHandler(transactionSvc, middlewareHandler, mngr, utilHandler)
 
 	ticketSvc := ticket.NewService(ticketRepo, userRepo, transactionRepo, redisCon, sslCommerz, rabbitMQ, ctx, cnf.PublicBaseURL)

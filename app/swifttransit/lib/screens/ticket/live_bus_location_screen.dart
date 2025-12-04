@@ -6,38 +6,110 @@ import 'package:provider/provider.dart';
 import '../../providers/live_location_provider.dart';
 import '../../core/colors.dart';
 
-class LiveBusLocationScreen extends StatelessWidget {
+class LiveBusLocationScreen extends StatefulWidget {
   const LiveBusLocationScreen({
     super.key,
     required this.routeId,
     required this.title,
     this.busName,
+    this.availableTickets,
   });
 
   final int routeId;
   final String title;
   final String? busName;
+  final List<Map<String, dynamic>>? availableTickets;
+
+  @override
+  State<LiveBusLocationScreen> createState() => _LiveBusLocationScreenState();
+}
+
+class _LiveBusLocationScreenState extends State<LiveBusLocationScreen> {
+  late Map<String, dynamic> _selectedTicket;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedTicket = _initialTicket();
+  }
+
+  Map<String, dynamic> _initialTicket() {
+    final tickets = widget.availableTickets ?? [];
+    if (tickets.isEmpty) {
+      final parts = widget.title.split('→');
+      final start = parts.isNotEmpty ? parts.first.trim() : widget.title;
+      final end = parts.length > 1 ? parts.last.trim() : '';
+      return {
+        'route_id': widget.routeId,
+        'start_destination': start,
+        'end_destination': end,
+        'bus_name': widget.busName,
+      };
+    }
+
+    return tickets.firstWhere(
+      (t) => (t['route_id'] as num?)?.toInt() == widget.routeId,
+      orElse: () => tickets.first,
+    );
+  }
+
+  void _changeTicket(Map<String, dynamic> ticket) {
+    setState(() {
+      _selectedTicket = ticket;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
+    final routeId = (_selectedTicket['route_id'] as num?)?.toInt() ?? widget.routeId;
+    final title = _selectedTicket.containsKey('start_destination') &&
+            _selectedTicket.containsKey('end_destination')
+        ? '${_selectedTicket['start_destination']} → ${_selectedTicket['end_destination']}'
+        : widget.title;
+    final busName = (_selectedTicket['bus_name'] ?? widget.busName)?.toString();
+
     return ChangeNotifierProvider(
+      key: ValueKey(routeId),
       create: (_) => LiveLocationProvider(routeId: routeId)..connect(),
-      child: _LiveBusLocationView(title: title, busName: busName),
+      child: _LiveBusLocationView(
+        title: title,
+        busName: busName,
+        tickets: widget.availableTickets,
+        selectedTicket: _selectedTicket,
+        onTicketChanged: widget.availableTickets != null ? _changeTicket : null,
+      ),
     );
   }
 }
 
 class _LiveBusLocationView extends StatelessWidget {
-  const _LiveBusLocationView({required this.title, this.busName});
+  const _LiveBusLocationView({
+    required this.title,
+    this.busName,
+    this.tickets,
+    this.selectedTicket,
+    this.onTicketChanged,
+  });
 
   final String title;
   final String? busName;
+  final List<Map<String, dynamic>>? tickets;
+  final Map<String, dynamic>? selectedTicket;
+  final ValueChanged<Map<String, dynamic>>? onTicketChanged;
 
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<LiveLocationProvider>();
     final update = provider.latestUpdate;
     final markers = <Marker>[];
+    final ticketOptions = tickets ?? [];
+    final selectedId = (selectedTicket?['id'] as num?)?.toInt() ??
+        (selectedTicket?['route_id'] as num?)?.toInt();
+    final dropdownValue = selectedId ??
+        (ticketOptions.isNotEmpty
+            ? ((ticketOptions.first['id'] as num?)?.toInt() ??
+                (ticketOptions.first['route_id'] as num?)?.toInt())
+            : null);
 
     if (update != null) {
       markers.add(
@@ -54,6 +126,47 @@ class _LiveBusLocationView extends StatelessWidget {
       appBar: AppBar(title: Text('Live Bus — $title')),
       body: Column(
         children: [
+          if (ticketOptions.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+              child: InputDecorator(
+                decoration: InputDecoration(
+                  labelText: 'Select ticket to track',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<int>(
+                    isExpanded: true,
+                    value: dropdownValue,
+                    items: ticketOptions.map((ticket) {
+                      final id = (ticket['id'] as num?)?.toInt() ??
+                          (ticket['route_id'] as num?)?.toInt();
+                      final label =
+                          '${ticket['bus_name'] ?? 'Bus'} • ${ticket['start_destination']} → ${ticket['end_destination']}';
+                      return DropdownMenuItem<int>(
+                        value: id,
+                        child: Text(label, overflow: TextOverflow.ellipsis),
+                      );
+                    }).toList(),
+                    onChanged: onTicketChanged == null
+                        ? null
+                        : (value) {
+                            if (value == null) return;
+                            final ticket = ticketOptions.firstWhere(
+                              (t) => ((t['id'] as num?)?.toInt() ??
+                                      (t['route_id'] as num?)?.toInt()) ==
+                                  value,
+                              orElse: () => <String, dynamic>{},
+                            );
+                            if (ticket.isNotEmpty) {
+                              onTicketChanged!(ticket as Map<String, dynamic>);
+                            }
+                          },
+                  ),
+                ),
+              ),
+            ),
           Expanded(
             child: FlutterMap(
               options: MapOptions(

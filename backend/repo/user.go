@@ -179,3 +179,40 @@ func (r *userRepo) FindByEmail(email string) (*domain.User, error) {
 	}
 	return &user, nil
 }
+
+func (r *userRepo) UpdateProfile(id int64, name, email, mobile string) (*domain.User, error) {
+	query := `
+        UPDATE users
+        SET name = $1, email = $2, mobile = $3
+        WHERE id = $4
+        RETURNING id, name, mobile, nid, email, is_student, balance
+    `
+
+	updated := domain.User{}
+	if err := r.dbCon.Get(&updated, query, name, email, mobile, id); err != nil {
+		return nil, err
+	}
+
+	return &updated, nil
+}
+
+func (r *userRepo) GetWithPassword(id int64) (*domain.User, error) {
+	user := domain.User{}
+	query := `SELECT id, name, mobile, nid, email, password, is_student, balance FROM users WHERE id=$1`
+
+	if err := r.dbCon.Get(&user, query, id); err != nil {
+		return nil, err
+	}
+
+	return &user, nil
+}
+
+func (r *userRepo) UpdatePasswordByID(id int64, newPassword string) error {
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+
+	_, err = r.dbCon.Exec(`UPDATE users SET password = $1 WHERE id = $2`, string(hashedPassword), id)
+	return err
+}
