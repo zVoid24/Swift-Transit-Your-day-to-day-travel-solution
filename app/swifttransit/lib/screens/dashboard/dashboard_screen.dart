@@ -533,7 +533,9 @@ class _MyTicketCardState extends State<_MyTicketCard> {
         ),
       ];
     }
-    return dashboardTickets.map((t) {
+    return dashboardTickets.asMap().entries.map((entry) {
+      final index = entry.key;
+      final t = entry.value;
       final paid = t['paid_status'] == true;
       final checked = t['checked'] == true;
       final canTrack = paid && !checked;
@@ -566,7 +568,10 @@ class _MyTicketCardState extends State<_MyTicketCard> {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => TicketDetailScreen(ticket: t),
+                  builder: (_) => TicketDetailScreen(
+                    tickets: dashboardTickets,
+                    initialIndex: index,
+                  ),
                 ),
               );
             },
@@ -689,4 +694,3 @@ class _TicketRow extends StatelessWidget {
     );
   }
 }
-

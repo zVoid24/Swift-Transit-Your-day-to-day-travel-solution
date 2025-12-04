@@ -25,12 +25,25 @@ func NewTicketWorker(svc Service, rabbitMQ *rabbitmq.RabbitMQ) *TicketWorker {
 }
 
 func (w *TicketWorker) Start() {
-	q, err := w.rabbitMQ.DeclareQueue("ticket_queue")
+	ch, err := w.rabbitMQ.Conn.Channel()
+	if err != nil {
+		log.Fatalf("Failed to open a channel: %v", err)
+	}
+	defer ch.Close()
+
+	q, err := ch.QueueDeclare(
+		"ticket_queue", // name
+		true,           // durable
+		false,          // delete when unused
+		false,          // exclusive
+		false,          // no-wait
+		nil,            // arguments
+	)
 	if err != nil {
 		log.Fatalf("Failed to declare queue: %v", err)
 	}
 
-	msgs, err := w.rabbitMQ.Channel.Consume(
+	msgs, err := ch.Consume(
 		q.Name, // queue
 		"",     // consumer
 		true,   // auto-ack

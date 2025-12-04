@@ -19,13 +19,9 @@ func (h *Handler) PaymentSuccess(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	alreadyUsed, err := h.svc.HandlePaymentResult(int64(id), "paid")
+	_, err = h.svc.HandlePaymentResult(int64(id), "paid")
 	if err != nil {
-		status := http.StatusInternalServerError
-		if alreadyUsed {
-			status = http.StatusBadRequest
-		}
-		h.utilHandler.SendError(w, map[string]string{"error": err.Error()}, status)
+		h.utilHandler.SendError(w, map[string]string{"error": err.Error()}, http.StatusInternalServerError)
 		return
 	}
 

@@ -302,7 +302,7 @@ func (s *service) HandlePaymentResult(id int64, status string) (bool, error) {
 	}
 
 	if ticket.PaymentUsed {
-		return true, fmt.Errorf("payment link already processed")
+		return true, nil
 	}
 
 	paid := status == "paid"

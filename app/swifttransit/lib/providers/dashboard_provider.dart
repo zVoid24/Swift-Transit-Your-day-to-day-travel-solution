@@ -716,7 +716,7 @@ class DashboardProvider extends ChangeNotifier {
 
     try {
       final response = await http.post(
-        Uri.parse('${AppConstants.baseUrl}/ticket/$ticketId/cancel'),
+        Uri.parse('${AppConstants.baseUrl}/ticket/cancel/$ticketId'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $jwt',
