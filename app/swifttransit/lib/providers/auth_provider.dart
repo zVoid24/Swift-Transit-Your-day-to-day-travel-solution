@@ -61,6 +61,19 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  Future<bool> checkLoginStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    final jwt = prefs.getString('jwt');
+    final userData = prefs.getString('user');
+
+    if (jwt != null && userData != null) {
+      _user = jsonDecode(userData);
+      notifyListeners();
+      return true;
+    }
+    return false;
+  }
+
   Future<bool> initiateSignup() async {
     isLoading = true;
     notifyListeners();

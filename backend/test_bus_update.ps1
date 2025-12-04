@@ -1,10 +1,9 @@
 $url = "http://localhost:8080/bus/location"
 $body = @{
     bus_id = 101
-    route_id = 1
+    route_id = 3
     latitude = 23.8103
     longitude = 90.4125
-    speed = 45.5
 } | ConvertTo-Json
 
 try {

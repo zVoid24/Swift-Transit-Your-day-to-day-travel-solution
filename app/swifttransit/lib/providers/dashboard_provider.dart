@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import '../screens/ticket/payment_webview_screen.dart';
@@ -462,9 +463,10 @@ class DashboardProvider extends ChangeNotifier {
         if (response.statusCode == 200) {
           final data = jsonDecode(response.body);
           final paymentUrl = (data['payment_url'] ?? '') as String;
+          final downloadUrl = (data['download_url'] ?? '') as String;
           final ticketId = (data['ticket']?['id'] as num?)?.toInt();
 
-          if (paymentUrl.isEmpty) {
+          if (paymentUrl.isEmpty && downloadUrl.isEmpty) {
             attempts++;
             continue;
           }
@@ -480,6 +482,12 @@ class DashboardProvider extends ChangeNotifier {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text('Ticket purchased with wallet.')),
             );
+
+            // If download URL is present, open it
+            if (downloadUrl.isNotEmpty) {
+              downloadTicket(downloadUrl);
+            }
+
             await fetchUserInfo();
             await fetchTickets();
             return;
@@ -519,6 +527,9 @@ class DashboardProvider extends ChangeNotifier {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text('Payment completed successfully.')),
             );
+            // We can try to fetch the ticket status again to get download URL or just rely on user going to ticket list
+            fetchTickets();
+            fetchUserInfo();
           },
           onFailure: () {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -638,5 +649,14 @@ class DashboardProvider extends ChangeNotifier {
       debugPrint("Error searching stops: $e");
     }
     return [];
+  }
+
+  Future<void> downloadTicket(String url) async {
+    final uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else {
+      debugPrint("Could not launch $url");
+    }
   }
 }

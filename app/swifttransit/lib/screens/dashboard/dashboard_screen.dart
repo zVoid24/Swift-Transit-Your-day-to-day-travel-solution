@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter_map/flutter_map.dart';
-import 'package:latlong2/latlong.dart';
 import '../../../core/colors.dart';
 
 import '../../providers/dashboard_provider.dart';
@@ -11,6 +9,7 @@ import '../search/search_screen.dart';
 import '../ticket/buy_ticket_screen.dart';
 import '../ticket/live_bus_location_screen.dart';
 import '../ticket/ticket_list_screen.dart';
+import '../ticket/ticket_detail_screen.dart';
 import '../../widgets/app_bottom_nav.dart';
 
 const double _kCorner = 16.0;
@@ -33,29 +32,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
     });
   }
 
-  void _handleBottomNav(BuildContext context, int index) {
-    switch (index) {
-      case 0:
-        return;
-      case 1:
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const SearchScreen()),
-        );
-        break;
-      case 2:
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const TicketListScreen()),
-        );
-        break;
-      case 3:
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const DemoProfileScreen()),
-        );
-        break;
-    }
+  int _currentIndex = 0;
+
+  final List<Widget> _screens = [
+    const _DashboardContent(),
+    const SearchScreen(),
+    const TicketListScreen(),
+    const DemoProfileScreen(),
+  ];
+
+  void _onItemTapped(int index) {
+    setState(() {
+      _currentIndex = index;
+    });
   }
 
   @override
@@ -63,21 +52,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
-        child: Stack(
-          children: [
-            _DashboardContent(),
-            Positioned(left: 0, right: 0, bottom: 72, child: _FixedAdBar()),
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: AppBottomNav(
-                currentIndex: 0,
-                onItemSelected: (index) => _handleBottomNav(context, index),
-              ),
-            ),
-          ],
-        ),
+        child: IndexedStack(index: _currentIndex, children: _screens),
+      ),
+      bottomNavigationBar: AppBottomNav(
+        currentIndex: _currentIndex,
+        onItemSelected: _onItemTapped,
       ),
     );
   }
@@ -89,11 +68,13 @@ class _DashboardContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 144.0),
+      padding: const EdgeInsets.only(bottom: 0),
       child: RefreshIndicator(
         onRefresh: () async {
-          final dashboardProvider =
-              Provider.of<DashboardProvider>(context, listen: false);
+          final dashboardProvider = Provider.of<DashboardProvider>(
+            context,
+            listen: false,
+          );
           await dashboardProvider.fetchUserInfo();
           await dashboardProvider.fetchTickets();
         },
@@ -496,8 +477,10 @@ class _ServiceSelector extends StatelessWidget {
           );
         }),
         _tile(context, 'Track Bus', Icons.track_changes, () {
-          final provider =
-              Provider.of<DashboardProvider>(context, listen: false);
+          final provider = Provider.of<DashboardProvider>(
+            context,
+            listen: false,
+          );
           final active = provider.activeTicket;
 
           if (active == null) {
@@ -557,9 +540,9 @@ class _MyTicketCardState extends State<_MyTicketCard> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-              children: [
-                const Expanded(
-                  child: Text(
+            children: [
+              const Expanded(
+                child: Text(
                   'My Ticket',
                   style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
                 ),
@@ -568,9 +551,7 @@ class _MyTicketCardState extends State<_MyTicketCard> {
                 onPressed: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(
-                      builder: (_) => const TicketListScreen(),
-                    ),
+                    MaterialPageRoute(builder: (_) => const TicketListScreen()),
                   );
                 },
                 child: const Text('See All'),
@@ -676,6 +657,14 @@ class _MyTicketCardState extends State<_MyTicketCard> {
                     );
                   }
                 : null,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => TicketDetailScreen(ticket: t),
+                ),
+              );
+            },
           ),
         ],
       );
@@ -706,6 +695,7 @@ class _TicketRow extends StatelessWidget {
   final String subtitle;
   final String status;
   final VoidCallback? onTrack;
+  final VoidCallback? onTap;
   final bool canTrack;
 
   const _TicketRow({
@@ -713,6 +703,7 @@ class _TicketRow extends StatelessWidget {
     required this.subtitle,
     required this.status,
     this.onTrack,
+    this.onTap,
     this.canTrack = false,
     Key? key,
   }) : super(key: key);
@@ -740,63 +731,73 @@ class _TicketRow extends StatelessWidget {
         color: Colors.grey.shade50,
         borderRadius: BorderRadius.circular(12),
       ),
-      child: Row(
-        children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.12),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(Icons.airport_shuttle, color: AppColors.primary),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: TextStyle(fontWeight: FontWeight.w700)),
-                SizedBox(height: 4),
-                Text(
-                  subtitle,
-                  style: TextStyle(color: Colors.black54, fontSize: 12),
-                ),
-              ],
-            ),
-          ),
-          Column(
-            mainAxisSize: MainAxisSize.min,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                width: 44,
+                height: 44,
                 decoration: BoxDecoration(
-                  color: pillColor.withOpacity(0.12),
-                  borderRadius: BorderRadius.circular(20),
+                  color: AppColors.primary.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(10),
                 ),
-                child: Text(
-                  status,
-                  style: TextStyle(
-                    color: pillColor,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 12,
-                  ),
+                child: Icon(Icons.airport_shuttle, color: AppColors.primary),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, style: TextStyle(fontWeight: FontWeight.w700)),
+                    SizedBox(height: 4),
+                    Text(
+                      subtitle,
+                      style: TextStyle(color: Colors.black54, fontSize: 12),
+                    ),
+                  ],
                 ),
               ),
-              if (canTrack) ...[
-                const SizedBox(height: 8),
-                ElevatedButton(
-                  onPressed: onTrack,
-                  style: ElevatedButton.styleFrom(
-                    minimumSize: const Size(80, 36),
-                    padding: const EdgeInsets.symmetric(horizontal: 10),
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: pillColor.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      status,
+                      style: TextStyle(
+                        color: pillColor,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 12,
+                      ),
+                    ),
                   ),
-                  child: const Text('Track'),
-                ),
-              ],
+                  if (canTrack) ...[
+                    const SizedBox(height: 8),
+                    ElevatedButton(
+                      onPressed: onTrack,
+                      style: ElevatedButton.styleFrom(
+                        minimumSize: const Size(80, 36),
+                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                      ),
+                      child: const Text('Track'),
+                    ),
+                  ],
+                ],
+              ),
             ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -944,55 +945,3 @@ class _SuggestedTrip extends StatelessWidget {
     );
   }
 }
-
-class _FixedAdBar extends StatelessWidget {
-  const _FixedAdBar({Key? key}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-      child: Container(
-        height: 56,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              AppColors.primary.withOpacity(0.95),
-              AppColors.primary.withOpacity(0.8),
-            ],
-          ),
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black12,
-              blurRadius: 8,
-              offset: Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            const SizedBox(width: 12),
-            Icon(Icons.local_offer, color: Colors.white),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                'Sponsored — 20% off intercity trips',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-            TextButton(
-              onPressed: () {},
-              child: Text('Learn', style: TextStyle(color: Colors.white)),
-            ),
-            const SizedBox(width: 8),
-          ],
-        ),
-      ),
-    );
-  }
-}
-

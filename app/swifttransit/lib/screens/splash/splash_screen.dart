@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../providers/auth_provider.dart';
 
 /// Native splash screen using an asset logo (assets/stlogo.png).
 /// Shows a rotating + pulsing logo while `initApp()` runs in background.
@@ -16,7 +18,7 @@ class SplashScreen extends StatefulWidget {
 
   const SplashScreen({
     super.key,
-    this.minDisplayDuration = const Duration(seconds: 5),
+    this.minDisplayDuration = const Duration(seconds: 2),
     this.initCallback,
   });
 
@@ -64,29 +66,24 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   /// Replace this with your real initialization (network check, auth, DB, etc)
-  Future<void> initApp() async {
+  Future<bool> initApp() async {
     if (widget.initCallback != null) {
       await widget.initCallback!.call();
-      return;
+      return false;
     }
 
-    // --- SIMULATION FOR TESTING ---
-    // Simulate some async work like network check / service init.
-    await Future.delayed(const Duration(seconds: 3));
-    // --------------------------------
+    // Check login status
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    return await authProvider.checkLoginStatus();
   }
 
   Future<void> _startInitialization() async {
     final started = DateTime.now();
+    bool isLoggedIn = false;
 
     try {
-      await initApp();
+      isLoggedIn = await initApp();
     } catch (e) {
-      // If initialization fails, you may choose to:
-      // - Retry
-      // - Show an error dialog
-      // - Navigate to an offline screen
-      // For now we just print and continue to the next step.
       debugPrint('Splash init error: $e');
     }
 
@@ -97,25 +94,20 @@ class _SplashScreenState extends State<SplashScreen>
       await Future.delayed(remaining);
     }
 
-    // Navigate away (comment out while testing if desired)
+    // Navigate away
     if (!mounted) return;
-    // For testing: comment the next line and uncomment the Timer below if you want delayed navigation.
-    //Navigator.pushReplacementNamed(context, '/login');
 
-    // Alternative test approach: if you prefer explicitly navigate after a delay,
-    // comment the line above and uncomment these lines:
-    //
-    Timer(const Duration(seconds: 10), () {
-      if (!mounted) return;
+    if (isLoggedIn) {
+      Navigator.pushReplacementNamed(context, '/dashboard');
+    } else {
       Navigator.pushReplacementNamed(context, '/login');
-    });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final media = MediaQuery.of(context);
     final width = media.size.width;
-    final height = media.size.height;
 
     final double computedFontSize = (width * 0.055).clamp(18.0, 32.0);
     final double subTextSize = math.max(12.0, computedFontSize * 0.45);
