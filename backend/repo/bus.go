@@ -75,10 +75,30 @@ func (r *busRepo) FindBus(start, end string) ([]domain.Bus, error) {
 
 func (r *busRepo) GetBusByRegistrationNumber(regNum string) (*domain.BusCredential, error) {
 	var busCred domain.BusCredential
-	query := `SELECT * FROM bus_credentials WHERE registration_number = $1`
+	query := `SELECT id, registration_number, password, route_id FROM bus_credentials WHERE registration_number = $1`
 	err := r.dbCon.Get(&busCred, query, regNum)
 	if err != nil {
 		return nil, err
 	}
 	return &busCred, nil
+}
+
+func (r *busRepo) Create(busCred domain.BusCredential) (*domain.BusCredential, error) {
+	query := `
+		INSERT INTO bus_credentials (registration_number, password, route_id)
+		VALUES ($1, $2, $3)
+		RETURNING id, registration_number, password, route_id
+	`
+	createdBus := domain.BusCredential{}
+	err := r.dbCon.Get(
+		&createdBus,
+		query,
+		busCred.RegistrationNumber,
+		busCred.Password,
+		busCred.RouteId,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &createdBus, nil
 }

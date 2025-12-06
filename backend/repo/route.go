@@ -1,6 +1,7 @@
 package repo
 
 import (
+	"encoding/json"
 	"fmt"
 	"swift_transit/domain"
 	"swift_transit/route"
@@ -50,6 +51,7 @@ func (r *routeRepo) Create(route domain.Route) (*domain.Route, error) {
 			orders []int
 			lons   []float64
 			lats   []float64
+			areas  []string
 		)
 
 		for _, stop := range route.Stops {
@@ -57,16 +59,23 @@ func (r *routeRepo) Create(route domain.Route) (*domain.Route, error) {
 			orders = append(orders, stop.Order)
 			lons = append(lons, stop.Lon)
 			lats = append(lats, stop.Lat)
+
+			var areaJSON string
+			if stop.AreaGeom != nil {
+				b, _ := json.Marshal(stop.AreaGeom)
+				areaJSON = string(b)
+			}
+			areas = append(areas, areaJSON)
 		}
 
 		stopQuery := `
-			INSERT INTO stops (route_id, name, stop_order, geom)
-			SELECT $1, u.name, u.stop_order, ST_SetSRID(ST_MakePoint(u.lon, u.lat), 4326)
-			FROM unnest($2::text[], $3::int[], $4::float8[], $5::float8[]) AS u(name, stop_order, lon, lat)
+			INSERT INTO stops (route_id, name, stop_order, geom, area_geom)
+			SELECT $1, u.name, u.stop_order, ST_SetSRID(ST_MakePoint(u.lon, u.lat), 4326), ST_SetSRID(ST_GeomFromGeoJSON(NULLIF(u.area_geom, '')), 4326)
+			FROM unnest($2::text[], $3::int[], $4::float8[], $5::float8[], $6::text[]) AS u(name, stop_order, lon, lat, area_geom)
 			RETURNING id
 		`
 
-		rows, err := tx.Queryx(stopQuery, routeID, pq.Array(names), pq.Array(orders), pq.Array(lons), pq.Array(lats))
+		rows, err := tx.Queryx(stopQuery, routeID, pq.Array(names), pq.Array(orders), pq.Array(lons), pq.Array(lats), pq.Array(areas))
 		if err != nil {
 			return nil, err
 		}
@@ -104,7 +113,7 @@ func (r *routeRepo) FindByID(id int64) (*domain.Route, error) {
 	}
 
 	var stops []domain.Stop
-	stopQuery := `SELECT id, route_id,stop_order,name, ST_X(geom::geometry) as lon, ST_Y(geom::geometry) as lat FROM stops WHERE route_id = $1 ORDER BY stop_order`
+	stopQuery := `SELECT id, route_id,stop_order,name, ST_X(geom::geometry) as lon, ST_Y(geom::geometry) as lat, COALESCE(ST_AsGeoJSON(area_geom), '') as area_geom FROM stops WHERE route_id = $1 ORDER BY stop_order`
 
 	err = r.dbCon.Select(&stops, stopQuery, id)
 	fmt.Println(stops)
@@ -135,7 +144,7 @@ func (r *routeRepo) FindRoute(start, end string) (*domain.Route, error) {
 
 	// Fetch stops for this route
 	var stops []domain.Stop
-	stopQuery := `SELECT id, route_id, stop_order, name, ST_X(geom::geometry) as lon, ST_Y(geom::geometry) as lat FROM stops WHERE route_id = $1 ORDER BY stop_order`
+	stopQuery := `SELECT id, route_id, stop_order, name, ST_X(geom::geometry) as lon, ST_Y(geom::geometry) as lat, COALESCE(ST_AsGeoJSON(area_geom), '') as area_geom FROM stops WHERE route_id = $1 ORDER BY stop_order`
 	err = r.dbCon.Select(&stops, stopQuery, route.Id)
 	if err != nil {
 		return nil, err
@@ -168,7 +177,7 @@ LIMIT 20
 	}
 
 	stopQuery := `
-SELECT id, route_id, stop_order, name, ST_X(geom::geometry) as lon, ST_Y(geom::geometry) as lat
+SELECT id, route_id, stop_order, name, ST_X(geom::geometry) as lon, ST_Y(geom::geometry) as lat, COALESCE(ST_AsGeoJSON(area_geom), '') as area_geom
 FROM stops
 WHERE route_id = ANY($1)
 ORDER BY stop_order

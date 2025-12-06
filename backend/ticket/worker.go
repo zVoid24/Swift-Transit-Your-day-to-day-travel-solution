@@ -140,8 +140,10 @@ func (w *TicketWorker) ProcessTicket(req TicketRequestMessage, trackingID string
 	}
 
 	var ticketIDs []int64
+	var qrCodes []string
 	for i := 0; i < req.Quantity; i++ {
 		qrCode := uuid.New().String()
+		qrCodes = append(qrCodes, qrCode)
 		ticket := domain.Ticket{
 			UserId:           req.UserId,
 			RouteId:          req.RouteId,
@@ -196,6 +198,21 @@ func (w *TicketWorker) ProcessTicket(req TicketRequestMessage, trackingID string
 		}
 		statusJSON, _ := json.Marshal(statusData)
 		s.redis.Set(s.ctx, fmt.Sprintf("ticket_status:%s", trackingID), statusJSON, 1*time.Hour)
+
+		// Store valid ticket in Redis for 4 hours
+		for i, tid := range ticketIDs {
+			validTicket := map[string]interface{}{
+				"ticket_id":         tid,
+				"route_id":          req.RouteId,
+				"start_destination": req.StartDestination,
+				"end_destination":   req.EndDestination,
+				"user_id":           req.UserId,
+				"created_at":        now,
+				"checked":           false,
+			}
+			validTicketJSON, _ := json.Marshal(validTicket)
+			s.redis.Set(s.ctx, fmt.Sprintf("ticket_valid:%s", qrCodes[i]), validTicketJSON, 4*time.Hour)
+		}
 	} else {
 		tranID := fmt.Sprintf("TICKET-%d-%s", ticketIDs[0], batchID[:8])
 		successUrl := fmt.Sprintf("%s/ticket/payment/success?id=%d", baseURL, ticketIDs[0])

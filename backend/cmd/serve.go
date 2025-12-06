@@ -72,8 +72,13 @@ func Start() {
 	ticketSvc := ticket.NewService(ticketRepo, userRepo, transactionRepo, redisCon, sslCommerz, rabbitMQ, ctx, cnf.PublicBaseURL)
 
 	// Start Ticket Worker
+	// Start Ticket Worker
 	ticketWorker := ticket.NewTicketWorker(ticketSvc, rabbitMQ)
 	go ticketWorker.Start()
+
+	// Start Ticket Check Worker
+	ticketCheckWorker := ticket.NewTicketCheckWorker(ticketSvc, ticketRepo, rabbitMQ)
+	go ticketCheckWorker.Start()
 
 	// WebSocket Hub
 	hub := location.NewHub()
@@ -81,7 +86,7 @@ func Start() {
 
 	userHdlr := userHandler.NewHandler(usrSvc, middlewareHandler, mngr, utilHandler, redisCon, ctx, hub)
 	routeHdlr := routeHandler.NewHandler(routeSvc, middlewareHandler, mngr, utilHandler)
-	busHdlr := busHandler.NewHandler(busSvc, middlewareHandler, mngr, utilHandler, hub)
+	busHdlr := busHandler.NewHandler(busSvc, ticketSvc, middlewareHandler, mngr, utilHandler, hub)
 	ticketHdlr := ticketHandler.NewHandler(ticketSvc, middlewareHandler, mngr, utilHandler, cnf.PublicBaseURL)
 
 	handler := rest.NewHandler(cnf, middlewareHandler, userHdlr, routeHdlr, busHdlr, ticketHdlr, transHandler)

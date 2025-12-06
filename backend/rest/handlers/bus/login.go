@@ -23,8 +23,22 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Generate JWT or just return success for now.
-	// The user didn't explicitly ask for JWT for bus, but "credential like bus number".
-	// Let's return the bus info.
-	h.utilHandler.SendData(w, bus, http.StatusOK)
+	busData := BusAuthData{
+		Id:                 bus.Id,
+		RegistrationNumber: bus.RegistrationNumber,
+		RouteId:            bus.RouteId,
+	}
+
+	token, err := h.utilHandler.CreateJWT(busData)
+	if err != nil {
+		h.utilHandler.SendError(w, "Failed to generate token", http.StatusInternalServerError)
+		return
+	}
+
+	resp := AuthResponse{
+		Token: token,
+		Bus:   busData,
+	}
+
+	h.utilHandler.SendData(w, resp, http.StatusOK)
 }

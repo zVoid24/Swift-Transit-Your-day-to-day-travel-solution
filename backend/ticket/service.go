@@ -178,24 +178,26 @@ func (s *service) GetTicketStatus(trackingID string) (*BuyTicketResponse, error)
 			Message: status,
 		}
 
+		if ticketID != 0 {
+			fullTicket, err := s.repo.Get(ticketID)
+			if err == nil {
+				resp.Ticket = fullTicket
+			} else {
+				// Fallback if DB fetch fails (shouldn't happen usually)
+				resp.Ticket = &domain.Ticket{Id: ticketID}
+			}
+		}
+
+		if len(ticketIDs) > 0 {
+			resp.TicketIDs = ticketIDs
+		}
+
 		if status == "ready" {
 			resp.PaymentURL = url
 			resp.Message = "Ready"
-			if ticketID != 0 {
-				resp.Ticket = &domain.Ticket{Id: ticketID}
-			}
-			if len(ticketIDs) > 0 {
-				resp.TicketIDs = ticketIDs
-			}
 		} else if status == "paid" {
 			resp.DownloadURL = url
 			resp.Message = "Paid"
-			if ticketID != 0 {
-				resp.Ticket = &domain.Ticket{Id: ticketID}
-			}
-			if len(ticketIDs) > 0 {
-				resp.TicketIDs = ticketIDs
-			}
 		} else if status == "failed" {
 			resp.Message = "Failed"
 			if errMsg, ok := statusData["error"].(string); ok {
@@ -279,7 +281,111 @@ func (s *service) ValidatePayment(valID string, tranID string, amount float64) (
 		return false, fmt.Errorf("failed to update payment status in db: %w", err)
 	}
 
+	// 5. Store valid ticket in Redis for 4 hours
+	ticket, err := s.repo.Get(ticketID)
+	if err == nil {
+		validTicket := map[string]interface{}{
+			"ticket_id":         ticket.Id,
+			"route_id":          ticket.RouteId,
+			"start_destination": ticket.StartDestination,
+			"end_destination":   ticket.EndDestination,
+			"user_id":           ticket.UserId,
+			"created_at":        ticket.CreatedAt,
+			"checked":           false,
+		}
+		validTicketJSON, _ := json.Marshal(validTicket)
+		s.redis.Set(s.ctx, fmt.Sprintf("ticket_valid:%s", ticket.QRCode), validTicketJSON, 4*time.Hour)
+	}
+
 	return true, nil
+}
+
+func (s *service) CheckTicket(req CheckTicketRequest) (map[string]interface{}, error) {
+	// 1. Check Redis
+	val, err := s.redis.Get(s.ctx, fmt.Sprintf("ticket_valid:%s", req.QRCode)).Result()
+	if err == redis.Nil {
+		return nil, fmt.Errorf("invalid or expired ticket")
+	} else if err != nil {
+		return nil, err
+	}
+
+	var ticketData map[string]interface{}
+	if err := json.Unmarshal([]byte(val), &ticketData); err != nil {
+		return nil, fmt.Errorf("failed to parse ticket data")
+	}
+
+	// 2. Validate Route
+	tRouteID := int64(ticketData["route_id"].(float64))
+	if tRouteID != req.RouteID {
+		return nil, fmt.Errorf("ticket is not for this route")
+	}
+
+	// 3. Check if already checked
+	if checked, ok := ticketData["checked"].(bool); ok && checked {
+		return nil, fmt.Errorf("ticket already used")
+	}
+
+	// 4. Check for Over-travel (Extra Fare)
+	// We need the ticket's end destination order
+	endDest, ok := ticketData["end_destination"].(string)
+	if !ok {
+		return nil, fmt.Errorf("invalid ticket data: missing end_destination")
+	}
+
+	destStop, err := s.repo.GetStop(req.RouteID, endDest)
+	if err != nil {
+		return nil, fmt.Errorf("failed to verify destination stop: %v", err)
+	}
+
+	var response map[string]interface{}
+	if req.CurrentStoppage.Order > destStop.Order {
+		// Calculate Extra Fare
+		extraFare, err := s.repo.CalculateFare(req.RouteID, endDest, req.CurrentStoppage.Name)
+		if err != nil {
+			return nil, fmt.Errorf("failed to calculate extra fare: %v", err)
+		}
+
+		response = map[string]interface{}{
+			"status":           "pay_extra",
+			"message":          fmt.Sprintf("You have over-traveled. Please pay extra fare: %.2f", extraFare),
+			"extra_fare":       extraFare,
+			"current_stoppage": req.CurrentStoppage.Name,
+			"ticket_end":       endDest,
+			"checked":          true,
+		}
+	} else {
+		response = ticketData
+		response["checked"] = true
+	}
+
+	// 5. Mark as checked in Redis
+	ticketData["checked"] = true
+	updatedJSON, _ := json.Marshal(ticketData)
+	s.redis.Set(s.ctx, fmt.Sprintf("ticket_valid:%s", req.QRCode), updatedJSON, redis.KeepTTL)
+
+	// 6. Publish to RabbitMQ for async updates (DB update)
+	checkEvent := map[string]interface{}{
+		"ticket_id":        ticketData["ticket_id"],
+		"qr_code":          req.QRCode,
+		"current_stoppage": req.CurrentStoppage.Name,
+		"checked_at":       time.Now(),
+	}
+	eventJSON, _ := json.Marshal(checkEvent)
+
+	q, err := s.rabbitMQ.DeclareQueue("ticket_check_queue")
+	if err == nil {
+		s.rabbitMQ.Channel.Publish(
+			"",     // exchange
+			q.Name, // routing key
+			false,  // mandatory
+			false,  // immediate
+			amqp.Publishing{
+				ContentType: "application/json",
+				Body:        eventJSON,
+			})
+	}
+
+	return response, nil
 }
 
 func (s *service) ValidateTicket(id int64) error {

@@ -10,6 +10,7 @@ import (
 
 type Property struct {
 	Name string `json:"Name"`
+	Type string `json:"type"`
 }
 
 type Geometry struct {
@@ -66,18 +67,41 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Extract Polygons
+	stopPolygons := make(map[string]Geometry)
+	for _, feature := range jsonData.Features {
+		if feature.Geom.Type == "Polygon" && feature.Properties.Type == "stop_area" {
+			stopPolygons[feature.Properties.Name] = feature.Geom
+		}
+	}
+
 	stoppages := []domain.Stop{}
 	for index, feature := range jsonData.Features {
 		if feature.Geom.Type == "Point" {
 			if coords, ok := feature.Geom.Coordinates.([]interface{}); ok {
 				lat := math.Round(coords[1].(float64)*100000) / 100000
 				lon := math.Round(coords[0].(float64)*100000) / 100000
-				stoppages = append(stoppages, domain.Stop{
+
+				stop := domain.Stop{
 					Name:  feature.Properties.Name,
 					Order: index,
 					Lon:   lon,
 					Lat:   lat,
-				})
+				}
+
+				// Attach polygon if exists
+				if poly, exists := stopPolygons[feature.Properties.Name]; exists {
+					// Convert Geometry to domain.Polygon
+					// Assuming Geometry.Coordinates is compatible with [][][]float64 structure
+					// We need to marshal and unmarshal to be safe or type assert carefully
+					polyJSON, _ := json.Marshal(poly)
+					var domainPoly domain.Polygon
+					if err := json.Unmarshal(polyJSON, &domainPoly); err == nil {
+						stop.AreaGeom = &domainPoly
+					}
+				}
+
+				stoppages = append(stoppages, stop)
 			}
 		}
 	}

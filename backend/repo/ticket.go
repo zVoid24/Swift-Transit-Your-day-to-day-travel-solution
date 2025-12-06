@@ -166,3 +166,34 @@ func (r *ticketRepo) GetBatchCount(batchID string) (int, error) {
 	err := r.dbCon.Get(&count, query, batchID)
 	return count, err
 }
+
+func (r *ticketRepo) GetStop(routeId int64, stopName string) (*domain.Stop, error) {
+	var stop domain.Stop
+	query := `
+		SELECT 
+			id, 
+			route_id, 
+			name, 
+			stop_order, 
+			ST_X(geom::geometry) as lon, 
+			ST_Y(geom::geometry) as lat, 
+			COALESCE(ST_AsGeoJSON(area_geom), '') as area_geom 
+		FROM stops 
+		WHERE route_id = $1 AND name = $2
+	`
+	err := r.dbCon.Get(&stop, query, routeId, stopName)
+	if err != nil {
+		return nil, err
+	}
+	return &stop, nil
+}
+
+func (r *ticketRepo) GetByQRCode(qrCode string) (*domain.Ticket, error) {
+	var ticket domain.Ticket
+	query := `SELECT * FROM tickets WHERE qr_code = $1`
+	err := r.dbCon.Get(&ticket, query, qrCode)
+	if err != nil {
+		return nil, err
+	}
+	return &ticket, nil
+}

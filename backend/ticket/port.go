@@ -39,6 +39,17 @@ type BuyTicketResponse struct {
 	TrackingID  string         `json:"tracking_id,omitempty"`
 }
 
+type CheckTicketStoppage struct {
+	Name  string `json:"name"`
+	Order int    `json:"order"`
+}
+
+type CheckTicketRequest struct {
+	QRCode          string              `json:"qr_code"`
+	RouteID         int64               `json:"route_id"`
+	CurrentStoppage CheckTicketStoppage `json:"current_stoppage"`
+}
+
 type Service interface {
 	BuyTicket(req BuyTicketRequest) (*BuyTicketResponse, error)
 	UpdatePaymentStatus(id int64) error
@@ -51,6 +62,7 @@ type Service interface {
 	GetPaymentStatus(ticketID int64) (string, error)
 	CancelTicket(userID int64, ticketID int64) (float64, error)
 	CreateTransaction(t model.Transaction) error
+	CheckTicket(req CheckTicketRequest) (map[string]interface{}, error)
 }
 
 type TicketRepo interface {
@@ -64,4 +76,6 @@ type TicketRepo interface {
 	UpdateBatchPaymentStatus(batchID string, paid bool, status string, markUsed bool) error
 	CancelTicket(id int64, cancelledAt time.Time, status string) error
 	GetBatchCount(batchID string) (int, error)
+	GetStop(routeId int64, stopName string) (*domain.Stop, error)
+	GetByQRCode(qrCode string) (*domain.Ticket, error)
 }
