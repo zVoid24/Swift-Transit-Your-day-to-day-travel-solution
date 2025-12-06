@@ -8,7 +8,11 @@ class LoginResult {
   final int routeId;
   final String busId;
 
-  LoginResult({required this.token, required this.routeId, required this.busId});
+  LoginResult({
+    required this.token,
+    required this.routeId,
+    required this.busId,
+  });
 }
 
 class TicketCheckResult {
@@ -32,24 +36,29 @@ class ApiService {
     required String busIdentifier,
     required String password,
   }) async {
-    final uri = Uri.parse('$baseUrl/bus/login');
+    final uri = Uri.parse('$baseUrl/bus/auth/login');
     final response = await http.post(
       uri,
       headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'bus_id': busIdentifier, 'password': password}),
+      body: jsonEncode({
+        'registration_number': busIdentifier,
+        'password': password,
+      }),
     );
 
     if (response.statusCode != 200) {
-      throw Exception('Login failed (${response.statusCode}): ${response.body}');
+      throw Exception(
+        'Login failed (${response.statusCode}): ${response.body}',
+      );
     }
 
     final data = jsonDecode(response.body) as Map<String, dynamic>;
     return LoginResult(
       token: data['token']?.toString() ?? '',
-      routeId: data['route_id'] is int
-          ? data['route_id'] as int
-          : int.tryParse(data['route_id'].toString()) ?? 0,
-      busId: data['bus_id']?.toString() ?? busIdentifier,
+      routeId: data['bus']['route_id'] is int
+          ? data['bus']['route_id'] as int
+          : int.tryParse(data['bus']['route_id'].toString()) ?? 0,
+      busId: data['bus']['registration_number']?.toString() ?? busIdentifier,
     );
   }
 
@@ -77,17 +86,19 @@ class ApiService {
     required int routeId,
     required String currentStop,
   }) async {
-    final uri = Uri.parse('$baseUrl/tickets/check');
-    final response = await http.post(uri,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-        body: jsonEncode({
-          'qr': qrData,
-          'route_id': routeId,
-          'current_stop': currentStop,
-        }));
+    final uri = Uri.parse('$baseUrl/bus/check-ticket');
+    final response = await http.post(
+      uri,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({
+        'qr_code': qrData,
+        'route_id': routeId,
+        'current_stoppage': currentStop,
+      }),
+    );
 
     if (response.statusCode != 200) {
       throw Exception('Ticket check failed (${response.statusCode})');

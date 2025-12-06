@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:qr_code_scanner/qr_code_scanner.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:swifttransit_bus/main.dart';
 import 'package:swifttransit_bus/services/api_service.dart';
 
@@ -20,26 +20,25 @@ class TicketScanScreen extends StatefulWidget {
 }
 
 class _TicketScanScreenState extends State<TicketScanScreen> {
-  final GlobalKey qrKey = GlobalKey(debugLabel: 'QR');
-  QRViewController? _controller;
+  final MobileScannerController _controller = MobileScannerController();
   bool _processing = false;
   String? _status;
 
   @override
   void dispose() {
-    _controller?.dispose();
+    _controller.dispose();
     super.dispose();
   }
 
-  void _onQRViewCreated(QRViewController controller) {
-    _controller = controller;
-    controller.scannedDataStream.listen((scanData) {
-      if (_processing) return;
-      final code = scanData.code;
-      if (code != null) {
-        _handleScan(code);
+  void _onDetect(BarcodeCapture capture) {
+    if (_processing) return;
+    final List<Barcode> barcodes = capture.barcodes;
+    for (final barcode in barcodes) {
+      if (barcode.rawValue != null) {
+        _handleScan(barcode.rawValue!);
+        break;
       }
-    });
+    }
   }
 
   Future<void> _handleScan(String data) async {
@@ -55,8 +54,9 @@ class _TicketScanScreenState extends State<TicketScanScreen> {
         currentStop: widget.currentStop,
       );
       setState(() {
-        _status =
-            result.isValid ? 'Valid ticket: ${result.message}' : 'Invalid: ${result.message}';
+        _status = result.isValid
+            ? 'Valid ticket: ${result.message}'
+            : 'Invalid: ${result.message}';
       });
     } catch (e) {
       setState(() {
@@ -73,17 +73,12 @@ class _TicketScanScreenState extends State<TicketScanScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Scan ticket'),
-      ),
+      appBar: AppBar(title: const Text('Scan ticket')),
       body: Column(
         children: [
           Expanded(
             flex: 4,
-            child: QRView(
-              key: qrKey,
-              onQRViewCreated: _onQRViewCreated,
-            ),
+            child: MobileScanner(controller: _controller, onDetect: _onDetect),
           ),
           Expanded(
             flex: 2,
@@ -96,7 +91,7 @@ class _TicketScanScreenState extends State<TicketScanScreen> {
                   if (_status != null) Text(_status!),
                   const SizedBox(height: 12),
                   ElevatedButton(
-                    onPressed: _processing ? null : () => _controller?.resumeCamera(),
+                    onPressed: _processing ? null : () => _controller.start(),
                     child: const Text('Resume scanning'),
                   ),
                 ],

@@ -7,6 +7,7 @@ class RouteResolver {
   int? _lastStopOrder;
 
   RouteStop? resolveCurrentStop(LatLng position) {
+    // 1. Check if we are inside any stop polygon
     for (final stop in route.stops) {
       if (stop.contains(position)) {
         _lastStopOrder = stop.order;
@@ -14,34 +15,39 @@ class RouteResolver {
       }
     }
 
+    // 2. If we have a last known stop, return the next one
     if (_lastStopOrder != null) {
-      return _nextStopAfter(_lastStopOrder!) ?? _currentByOrder(_lastStopOrder!);
+      return _nextStopAfter(_lastStopOrder!) ??
+          _currentByOrder(_lastStopOrder!);
     }
 
-    if (route.stops.isEmpty) return null;
+    // 3. Initial state: we haven't hit any stop yet.
+    // Return the first stop in the route.
+    if (route.stops.isNotEmpty) {
+      final sortedStops = [...route.stops]
+        ..sort((a, b) => a.order.compareTo(b.order));
+      return sortedStops.first;
+    }
 
-    // No last known stop; fallback to the closest stop along the ordered list.
-    route.stops.sort((a, b) => a.order.compareTo(b.order));
-    _lastStopOrder = route.stops.first.order;
-    return route.stops.first;
+    return null;
   }
 
   RouteStop? _currentByOrder(int order) {
-    return route.stops.firstWhere(
-      (stop) => stop.order == order,
-      orElse: () => route.stops.first,
-    );
+    try {
+      return route.stops.firstWhere((stop) => stop.order == order);
+    } catch (_) {
+      return route.stops.isNotEmpty ? route.stops.first : null;
+    }
   }
 
   RouteStop? _nextStopAfter(int order) {
     final sorted = [...route.stops]..sort((a, b) => a.order.compareTo(b.order));
     for (final stop in sorted) {
       if (stop.order > order) {
-        _lastStopOrder = stop.order;
         return stop;
       }
     }
-    // Already past final stop; stay on the last one.
+    // If no next stop (we are at the end), return the last stop
     return sorted.isNotEmpty ? sorted.last : null;
   }
 }

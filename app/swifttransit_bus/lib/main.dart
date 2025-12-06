@@ -9,8 +9,8 @@ import 'package:swifttransit_bus/services/location_service.dart';
 import 'package:swifttransit_bus/services/route_storage.dart';
 import 'package:swifttransit_bus/services/socket_service.dart';
 
-const _apiBaseUrl = 'http://localhost:8000/api';
-const _socketUrl = 'ws://localhost:8000/ws';
+const _apiBaseUrl = 'https://thermosetting-paralexic-paulene.ngrok-free.dev';
+const _socketUrl = 'wss://thermosetting-paralexic-paulene.ngrok-free.de/ws';
 
 void main() {
   runApp(const MyApp());
@@ -46,7 +46,10 @@ class _MyAppState extends State<MyApp> {
     final routeId = await storage.routeId;
     final busId = await storage.busId;
     final cachedRoute = await storage.cachedRoute;
-    if (token == null || routeId == null || busId == null || cachedRoute == null) {
+    if (token == null ||
+        routeId == null ||
+        busId == null ||
+        cachedRoute == null) {
       return (null, null);
     }
     return (
