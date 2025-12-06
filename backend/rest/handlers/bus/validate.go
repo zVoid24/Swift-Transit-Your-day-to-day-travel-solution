@@ -16,7 +16,7 @@ func (h *Handler) ValidateTicket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	busData, err := h.busFromContext(r)
+	busData, err := h.BusFromContext(r)
 	if err != nil {
 		h.utilHandler.SendError(w, "Unauthorized", http.StatusUnauthorized)
 		return

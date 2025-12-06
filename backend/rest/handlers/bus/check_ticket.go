@@ -19,7 +19,7 @@ func (h *Handler) CheckTicket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	busData, err := h.busFromContext(r)
+	busData, err := h.BusFromContext(r)
 	if err != nil {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
