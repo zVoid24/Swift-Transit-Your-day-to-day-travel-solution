@@ -64,11 +64,6 @@ func (c *Client) readPump() {
 			break
 		}
 
-		if !c.canPublish {
-			// Read and discard messages from listeners to keep the connection healthy.
-			continue
-		}
-
 		var update LocationUpdate
 		if err := json.Unmarshal(message, &update); err != nil {
 			log.Printf("invalid location payload: %v", err)
