@@ -567,6 +567,19 @@ func (s *service) CancelTicket(userID int64, ticketID int64) (float64, error) {
 		if err := s.userRepo.CreditBalance(ticket.UserId, refundAmount); err != nil {
 			return 0, err
 		}
+
+		// Create Transaction for Refund
+		if err := s.CreateTransaction(model.Transaction{
+			UserID:        int(ticket.UserId),
+			Amount:        refundAmount,
+			Type:          "refund",
+			Description:   fmt.Sprintf("Ticket Refund - %s", ticket.BusName),
+			PaymentMethod: "Wallet",
+			CreatedAt:     time.Now(),
+		}); err != nil {
+			// Log error but don't fail the request as refund is already processed
+			fmt.Printf("failed to create refund transaction: %v\n", err)
+		}
 	}
 
 	return refundAmount, nil

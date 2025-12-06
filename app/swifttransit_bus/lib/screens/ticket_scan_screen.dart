@@ -82,7 +82,7 @@ class _TicketScanScreenState extends State<TicketScanScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Scan Ticket')),
+      backgroundColor: Colors.black,
       body: Stack(
         children: [
           MobileScanner(
@@ -90,75 +90,309 @@ class _TicketScanScreenState extends State<TicketScanScreen> {
             onDetect: _onDetect,
             errorBuilder: (context, error, child) {
               return Center(
-                child: Text(
-                  'Camera error: $error',
-                  style: const TextStyle(color: Colors.red),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.error_outline,
+                      color: Colors.red,
+                      size: 48,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Camera error: $error',
+                      style: const TextStyle(color: Colors.white, fontSize: 16),
+                    ),
+                  ],
                 ),
               );
             },
           ),
-          // Overlay for scanning area
-          Container(
-            decoration: ShapeDecoration(
-              shape: QrScannerOverlayShape(
-                borderColor: const Color(0xFF258BA1),
-                borderRadius: 10,
-                borderLength: 30,
-                borderWidth: 10,
-                cutOutSize: 300,
-              ),
-            ),
-          ),
-          // Status Overlay
-          if (_processing)
-            Container(
-              color: Colors.black54,
-              child: Center(
+
+          // Custom Overlay
+          Stack(
+            children: [
+              // Top Bar
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
                 child: Container(
-                  margin: const EdgeInsets.all(32),
+                  padding: EdgeInsets.only(
+                    top: MediaQuery.of(context).padding.top + 16,
+                    bottom: 16,
+                    left: 16,
+                    right: 16,
+                  ),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.black.withOpacity(0.8),
+                        Colors.transparent,
+                      ],
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(
+                          Icons.arrow_back,
+                          color: Colors.white,
+                          size: 28,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      const Text(
+                        'Scan Ticket',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // Scanner Frame
+              Center(
+                child: Container(
+                  width: 280,
+                  height: 280,
+                  decoration: BoxDecoration(
+                    border: Border.all(
+                      color: Colors.white.withOpacity(0.5),
+                      width: 2,
+                    ),
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  child: Stack(
+                    children: [
+                      // Corners
+                      ...List.generate(4, (index) {
+                        final isTop = index < 2;
+                        final isLeft = index % 2 == 0;
+                        return Positioned(
+                          top: isTop ? -2 : null,
+                          bottom: !isTop ? -2 : null,
+                          left: isLeft ? -2 : null,
+                          right: !isLeft ? -2 : null,
+                          child: Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              border: Border(
+                                top: isTop
+                                    ? const BorderSide(
+                                        color: Color(0xFF258BA1),
+                                        width: 6,
+                                      )
+                                    : BorderSide.none,
+                                bottom: !isTop
+                                    ? const BorderSide(
+                                        color: Color(0xFF258BA1),
+                                        width: 6,
+                                      )
+                                    : BorderSide.none,
+                                left: isLeft
+                                    ? const BorderSide(
+                                        color: Color(0xFF258BA1),
+                                        width: 6,
+                                      )
+                                    : BorderSide.none,
+                                right: !isLeft
+                                    ? const BorderSide(
+                                        color: Color(0xFF258BA1),
+                                        width: 6,
+                                      )
+                                    : BorderSide.none,
+                              ),
+                              borderRadius: BorderRadius.only(
+                                topLeft: isTop && isLeft
+                                    ? const Radius.circular(24)
+                                    : Radius.zero,
+                                topRight: isTop && !isLeft
+                                    ? const Radius.circular(24)
+                                    : Radius.zero,
+                                bottomLeft: !isTop && isLeft
+                                    ? const Radius.circular(24)
+                                    : Radius.zero,
+                                bottomRight: !isTop && !isLeft
+                                    ? const Radius.circular(24)
+                                    : Radius.zero,
+                              ),
+                            ),
+                          ),
+                        );
+                      }),
+                      // Scanning Line Animation (Optional - static for now)
+                      Center(
+                        child: Container(
+                          height: 2,
+                          color: const Color(0xFF258BA1).withOpacity(0.5),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // Bottom Info
+              Positioned(
+                bottom: 0,
+                left: 0,
+                right: 0,
+                child: Container(
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(24),
+                    ),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Current Stop',
+                        style: TextStyle(
+                          color: Colors.grey[600],
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        widget.currentStop.name,
+                        style: const TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Align the QR code within the frame',
+                        style: TextStyle(color: Colors.grey[600], fontSize: 16),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+
+          // Result Overlay
+          if (_processing || _statusMessage != null)
+            Container(
+              color: Colors.black87,
+              child: Center(
+                child: Container(
+                  margin: const EdgeInsets.all(32),
+                  padding: const EdgeInsets.all(32),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(24),
                   ),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       if (_isValid == null)
-                        const CircularProgressIndicator(
-                          color: Color(0xFF258BA1),
+                        const SizedBox(
+                          width: 80,
+                          height: 80,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 6,
+                            color: Color(0xFF258BA1),
+                          ),
                         )
                       else if (_isValid == true)
-                        const Icon(
-                          Icons.check_circle,
-                          color: Colors.green,
-                          size: 64,
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.green[50],
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.check_rounded,
+                            color: Colors.green,
+                            size: 64,
+                          ),
                         )
                       else
-                        const Icon(Icons.cancel, color: Colors.red, size: 64),
-                      const SizedBox(height: 16),
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.red[50],
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.close_rounded,
+                            color: Colors.red,
+                            size: 64,
+                          ),
+                        ),
+                      const SizedBox(height: 24),
                       Text(
-                        _statusMessage ?? 'Processing...',
-                        textAlign: TextAlign.center,
+                        _isValid == null
+                            ? 'Checking Ticket...'
+                            : (_isValid == true
+                                  ? 'Valid Ticket'
+                                  : 'Invalid Ticket'),
                         style: TextStyle(
-                          fontSize: 18,
+                          fontSize: 24,
                           fontWeight: FontWeight.bold,
                           color: _isValid == null
                               ? Colors.black87
-                              : (_isValid == true ? Colors.green : Colors.red),
+                              : (_isValid == true
+                                    ? Colors.green[700]
+                                    : Colors.red[700]),
                         ),
                       ),
+                      if (_statusMessage != null && _isValid != null) ...[
+                        const SizedBox(height: 12),
+                        Text(
+                          _statusMessage!,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.grey[700],
+                          ),
+                        ),
+                      ],
                       if (_isValid != null) ...[
-                        const SizedBox(height: 16),
-                        ElevatedButton(
-                          onPressed: () {
-                            setState(() {
-                              _processing = false;
-                              _statusMessage = null;
-                              _isValid = null;
-                            });
-                          },
-                          child: const Text('Scan Next'),
+                        const SizedBox(height: 32),
+                        SizedBox(
+                          width: double.infinity,
+                          height: 56,
+                          child: ElevatedButton(
+                            onPressed: () {
+                              setState(() {
+                                _processing = false;
+                                _statusMessage = null;
+                                _isValid = null;
+                              });
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF258BA1),
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              elevation: 0,
+                            ),
+                            child: const Text(
+                              'Scan Next',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
                         ),
                       ],
                     ],
@@ -166,36 +400,6 @@ class _TicketScanScreenState extends State<TicketScanScreen> {
                 ),
               ),
             ),
-          // Bottom Info Panel
-          Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'Current Stop: ${widget.currentStop.name}',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Align QR code within the frame',
-                    style: TextStyle(color: Colors.grey[600]),
-                  ),
-                ],
-              ),
-            ),
-          ),
         ],
       ),
     );

@@ -652,10 +652,13 @@ class _MyTicketCardState extends State<_MyTicketCard> {
     return dashboardTickets.asMap().entries.map((entry) {
       final index = entry.key;
       final t = entry.value;
+      final cancelled = t['cancelled_at'] != null;
       final paid = t['paid_status'] == true;
       final checked = t['checked'] == true;
-      final canTrack = paid && !checked;
-      final statusLabel = canTrack ? 'Upcoming' : (paid ? 'Paid' : 'Unpaid');
+      final canTrack = paid && !checked && !cancelled;
+      final statusLabel = cancelled
+          ? 'Cancelled'
+          : (canTrack ? 'Upcoming' : (paid ? 'Paid' : 'Unpaid'));
 
       return Column(
         children: [

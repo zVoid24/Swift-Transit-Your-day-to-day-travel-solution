@@ -13,6 +13,7 @@ class SocketService {
   }
 
   Future<void> sendPosition({
+    required String token,
     required LatLng position,
     required int routeId,
     required int busCredentialId,
@@ -21,7 +22,10 @@ class SocketService {
       final uri = Uri.parse(url);
       final response = await http.post(
         uri,
-        headers: {'Content-Type': 'application/json'},
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
         body: jsonEncode({
           'route_id': routeId,
           'bus_id': busCredentialId,

@@ -1,6 +1,7 @@
 package bus
 
 import (
+	"swift_transit/bus" // Added import
 	"swift_transit/domain"
 	"swift_transit/ticket"
 )

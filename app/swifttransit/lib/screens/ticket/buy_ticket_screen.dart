@@ -205,9 +205,11 @@ class _BuyTicketScreenState extends State<BuyTicketScreen> {
               child: Icon(Icons.check, color: AppColors.primary),
             ),
             const SizedBox(width: 12),
-            Text(
-              'Payment Successful',
-              style: GoogleFonts.poppins(fontWeight: FontWeight.w700),
+            Expanded(
+              child: Text(
+                'Payment Successful',
+                style: GoogleFonts.poppins(fontWeight: FontWeight.w700),
+              ),
             ),
           ],
         ),
@@ -833,11 +835,13 @@ class _BuyTicketScreenState extends State<BuyTicketScreen> {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  Text(
-                    "Pay Online ($fareText)",
-                    style: GoogleFonts.poppins(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
+                  Expanded(
+                    child: Text(
+                      "Pay Online ($fareText)",
+                      style: GoogleFonts.poppins(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                   const Spacer(),
@@ -910,11 +914,13 @@ class _BuyTicketScreenState extends State<BuyTicketScreen> {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  Text(
-                    "Pay via Swift Balance ($fareText)",
-                    style: GoogleFonts.poppins(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
+                  Expanded(
+                    child: Text(
+                      "Pay via Swift Balance ($fareText)",
+                      style: GoogleFonts.poppins(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                   const Spacer(),

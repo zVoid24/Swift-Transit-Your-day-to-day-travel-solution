@@ -109,7 +109,8 @@ class DashboardProvider extends ChangeNotifier {
       if (ticket is Map<String, dynamic>) {
         final paid = ticket['paid_status'] == true;
         final checked = ticket['checked'] == true;
-        if (paid && !checked) {
+        final cancelled = ticket['cancelled_at'] != null;
+        if (paid && !checked && !cancelled) {
           return ticket;
         }
       }
@@ -158,7 +159,9 @@ class DashboardProvider extends ChangeNotifier {
         .whereType<Map<String, dynamic>>()
         .where(
           (ticket) =>
-              ticket['paid_status'] == true && ticket['checked'] != true,
+              ticket['paid_status'] == true &&
+              ticket['checked'] != true &&
+              ticket['cancelled_at'] == null,
         )
         .toList()
       ..sort((a, b) {

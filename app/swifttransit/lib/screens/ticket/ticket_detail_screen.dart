@@ -59,9 +59,9 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
       );
       Navigator.of(context).pop();
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Unable to cancel ticket.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Unable to cancel ticket.')));
     }
   }
 
@@ -134,8 +134,9 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: ElevatedButton(
-                    onPressed:
-                        _canCancel(_currentTicket) ? () => _handleCancel(context) : null,
+                    onPressed: _canCancel(_currentTicket)
+                        ? () => _handleCancel(context)
+                        : null,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.redAccent,
                       foregroundColor: Colors.white,
@@ -154,7 +155,9 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                           )
                         : Text(
                             'Cancel & Refund',
-                            style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+                            style: GoogleFonts.poppins(
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                   ),
                 ),
@@ -176,16 +179,18 @@ class _TicketCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final ticketId = ticket['id'];
     final busName = ticket['bus_name'] ?? 'Swift Bus';
-    final route = '${ticket['start_destination']} → ${ticket['end_destination']}';
+    final route =
+        '${ticket['start_destination']} → ${ticket['end_destination']}';
     final fare = ticket['fare'];
     final date = ticket['created_at'];
     final qrData = ticket['qr_code'] ?? 'TICKET-$ticketId';
-    final qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=$qrData';
+    final qrUrl =
+        'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=$qrData';
     final status = ticket['cancelled_at'] != null
         ? 'Cancelled'
         : ticket['paid_status'] == true
-            ? (ticket['checked'] == true ? 'Completed' : 'Upcoming')
-            : 'Unpaid';
+        ? (ticket['checked'] == true ? 'Completed' : 'Upcoming')
+        : 'Unpaid';
 
     return Container(
       decoration: BoxDecoration(
@@ -257,10 +262,7 @@ class _TicketCard extends StatelessWidget {
                 const SizedBox(height: 10),
                 Text(
                   'Scan to Verify',
-                  style: GoogleFonts.poppins(
-                    color: Colors.grey,
-                    fontSize: 12,
-                  ),
+                  style: GoogleFonts.poppins(color: Colors.grey, fontSize: 12),
                 ),
                 const SizedBox(height: 10),
                 Image.network(
@@ -276,7 +278,7 @@ class _TicketCard extends StatelessWidget {
                         child: CircularProgressIndicator(
                           value: loadingProgress.expectedTotalBytes != null
                               ? loadingProgress.cumulativeBytesLoaded /
-                                  loadingProgress.expectedTotalBytes!
+                                    loadingProgress.expectedTotalBytes!
                               : null,
                         ),
                       ),
@@ -287,10 +289,7 @@ class _TicketCard extends StatelessWidget {
                       width: 150,
                       height: 150,
                       child: Center(
-                        child: Icon(
-                          Icons.broken_image,
-                          color: Colors.grey,
-                        ),
+                        child: Icon(Icons.broken_image, color: Colors.grey),
                       ),
                     );
                   },
@@ -311,12 +310,15 @@ class _TicketCard extends StatelessWidget {
           label,
           style: GoogleFonts.poppins(color: Colors.grey[600], fontSize: 14),
         ),
-        Text(
-          value,
-          style: GoogleFonts.poppins(
-            color: Colors.black87,
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
+        Expanded(
+          child: Text(
+            value,
+            textAlign: TextAlign.end,
+            style: GoogleFonts.poppins(
+              color: Colors.black87,
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ),
       ],
