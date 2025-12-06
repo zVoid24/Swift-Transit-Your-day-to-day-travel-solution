@@ -42,6 +42,9 @@ type Client struct {
 
 	// Route ID the client is interested in
 	routeID int64
+
+	// Whether this client is allowed to publish location updates
+	canPublish bool
 }
 
 func (c *Client) readPump() {
@@ -103,13 +106,13 @@ func (c *Client) writePump() {
 	}
 }
 
-func ServeWs(hub *Hub, w http.ResponseWriter, r *http.Request, routeID int64) {
+func ServeWs(hub *Hub, w http.ResponseWriter, r *http.Request, routeID int64, canPublish bool) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Println(err)
 		return
 	}
-	client := &Client{hub: hub, conn: conn, send: make(chan LocationUpdate, 256), routeID: routeID}
+	client := &Client{hub: hub, conn: conn, send: make(chan LocationUpdate, 256), routeID: routeID, canPublish: canPublish}
 	client.hub.register <- client
 
 	// Allow collection of memory referenced by the caller by doing all work in

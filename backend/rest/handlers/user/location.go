@@ -21,5 +21,5 @@ func (h *Handler) LocationSocket(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Upgrade to WebSocket
-	location.ServeWs(h.hub, w, r, routeID)
+	location.ServeWs(h.hub, w, r, routeID, false)
 }
