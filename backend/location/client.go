@@ -1,6 +1,7 @@
 package location
 
 import (
+	"encoding/json"
 	"log"
 	"net/http"
 	"time"
@@ -41,6 +42,9 @@ type Client struct {
 
 	// Route ID the client is interested in
 	routeID int64
+
+	// Whether this client is allowed to publish location updates
+	canPublish bool
 }
 
 func (c *Client) readPump() {
@@ -52,13 +56,31 @@ func (c *Client) readPump() {
 	c.conn.SetReadDeadline(time.Now().Add(pongWait))
 	c.conn.SetPongHandler(func(string) error { c.conn.SetReadDeadline(time.Now().Add(pongWait)); return nil })
 	for {
-		_, _, err := c.conn.ReadMessage()
+		_, message, err := c.conn.ReadMessage()
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
 				log.Printf("error: %v", err)
 			}
 			break
 		}
+
+		if !c.canPublish {
+			// Read and discard messages from listeners to keep the connection healthy.
+			continue
+		}
+
+		var update LocationUpdate
+		if err := json.Unmarshal(message, &update); err != nil {
+			log.Printf("invalid location payload: %v", err)
+			continue
+		}
+
+		// Default to the subscribed route when the sender omits route_id
+		if update.RouteID == 0 {
+			update.RouteID = c.routeID
+		}
+
+		c.hub.BroadcastLocation(update)
 	}
 }
 
@@ -89,13 +111,13 @@ func (c *Client) writePump() {
 	}
 }
 
-func ServeWs(hub *Hub, w http.ResponseWriter, r *http.Request, routeID int64) {
+func ServeWs(hub *Hub, w http.ResponseWriter, r *http.Request, routeID int64, canPublish bool) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Println(err)
 		return
 	}
-	client := &Client{hub: hub, conn: conn, send: make(chan LocationUpdate, 256), routeID: routeID}
+	client := &Client{hub: hub, conn: conn, send: make(chan LocationUpdate, 256), routeID: routeID, canPublish: canPublish}
 	client.hub.register <- client
 
 	// Allow collection of memory referenced by the caller by doing all work in
