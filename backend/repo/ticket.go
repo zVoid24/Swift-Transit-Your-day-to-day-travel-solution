@@ -32,8 +32,8 @@ func NewTicketRepo(dbcon *sqlx.DB, utilHandler *utils.Handler) TicketRepo {
 
 func (r *ticketRepo) Create(ticket domain.Ticket) (*domain.Ticket, error) {
 	query := `
-                INSERT INTO tickets (user_id, route_id, bus_name, start_destination, end_destination, fare, paid_status, checked, qr_code, created_at, batch_id, payment_method, payment_reference, payment_used, payment_status, cancelled_at)
-                VALUES (:user_id, :route_id, :bus_name, :start_destination, :end_destination, :fare, :paid_status, :checked, :qr_code, :created_at, :batch_id, :payment_method, :payment_reference, :payment_used, :payment_status, :cancelled_at)
+                INSERT INTO tickets (user_id, route_id, bus_name, start_destination, end_destination, fare, paid_status, checked, qr_code, created_at, batch_id, payment_method, payment_reference, payment_used, payment_status, cancelled_at, registration_number)
+                VALUES (:user_id, :route_id, :bus_name, :start_destination, :end_destination, :fare, :paid_status, :checked, :qr_code, :created_at, :batch_id, :payment_method, :payment_reference, :payment_used, :payment_status, :cancelled_at, :registration_number)
                 RETURNING id
         `
 	rows, err := r.dbCon.NamedQuery(query, ticket)
@@ -154,9 +154,9 @@ func (r *ticketRepo) CancelTicket(id int64, cancelledAt time.Time, status string
 	return err
 }
 
-func (r *ticketRepo) ValidateTicket(id int64) error {
-	query := `UPDATE tickets SET checked = TRUE WHERE id = $1`
-	_, err := r.dbCon.Exec(query, id)
+func (r *ticketRepo) ValidateTicket(id int64, registrationNumber string) error {
+	query := `UPDATE tickets SET checked = TRUE, registration_number = $2 WHERE id = $1`
+	_, err := r.dbCon.Exec(query, id, registrationNumber)
 	return err
 }
 

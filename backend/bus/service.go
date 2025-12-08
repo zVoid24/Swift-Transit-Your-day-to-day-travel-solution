@@ -85,7 +85,7 @@ func (svc *service) Register(regNum, password string, routeIdUp, routeIdDown int
 	return svc.repo.Create(busCred)
 }
 
-func (svc *service) ValidateTicket(ticketID int64, routeID int64) error {
+func (svc *service) ValidateTicket(ticketID int64, routeID int64, RegistrationNumber string) error {
 	// 1. Get Ticket
 	ticket, err := svc.ticketRepo.Get(ticketID)
 	if err != nil {
@@ -111,7 +111,7 @@ func (svc *service) ValidateTicket(ticketID int64, routeID int64) error {
 	}
 
 	// 4. Update status
-	return svc.ticketRepo.ValidateTicket(ticketID)
+	return svc.ticketRepo.ValidateTicket(ticketID, RegistrationNumber)
 }
 
 func (svc *service) CheckTicket(req ticket.CheckTicketRequest) (map[string]interface{}, error) {
@@ -139,8 +139,9 @@ func (svc *service) CheckTicket(req ticket.CheckTicketRequest) (map[string]inter
 	}
 
 	response := map[string]interface{}{
-		"status": "valid",
-		"ticket": t,
+		"success": true,
+		"status":  "valid",
+		"ticket":  t,
 	}
 
 	if req.CurrentStoppage.Order > destStop.Order {
@@ -154,7 +155,7 @@ func (svc *service) CheckTicket(req ticket.CheckTicketRequest) (map[string]inter
 		response["extra_fare"] = extraFare
 	}
 
-	err = svc.ticketRepo.ValidateTicket(t.Id)
+	err = svc.ticketRepo.ValidateTicket(t.Id, req.RegistrationNumber)
 	if err != nil {
 		return nil, err
 	}

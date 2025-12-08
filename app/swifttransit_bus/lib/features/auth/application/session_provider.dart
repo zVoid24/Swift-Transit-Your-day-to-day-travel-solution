@@ -32,6 +32,7 @@ class SessionProvider extends ChangeNotifier {
     final busId = await storage.busId;
     final busCredentialId = await storage.busCredentialId;
     final variant = await storage.variant;
+    final registrationNumber = await storage.registrationNumber;
     final cachedRoute = await storage.cachedRoute;
 
     if (token != null &&
@@ -46,6 +47,7 @@ class SessionProvider extends ChangeNotifier {
         busId: busId,
         busCredentialId: busCredentialId,
         variant: variant,
+        registrationNumber: registrationNumber ?? "",
       );
       route = cachedRoute;
     }
@@ -81,6 +83,7 @@ class SessionProvider extends ChangeNotifier {
         busId: login.busId,
         busCredentialId: login.busCredentialId,
         variant: login.variant,
+        registrationNumber: login.registrationNumber,
       );
       await storage.saveRoute(fetchedRoute);
 
@@ -90,6 +93,7 @@ class SessionProvider extends ChangeNotifier {
         busId: login.busId,
         busCredentialId: login.busCredentialId,
         variant: login.variant,
+        registrationNumber: login.registrationNumber,
       );
       route = fetchedRoute;
       socketService.connect(login.token, login.routeId);

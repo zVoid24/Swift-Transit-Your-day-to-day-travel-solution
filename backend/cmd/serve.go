@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"swift_transit/bus"
+	"swift_transit/bus_owner"
 	"swift_transit/config"
 	"swift_transit/infra/db"
 	"swift_transit/infra/payment"
@@ -13,6 +14,7 @@ import (
 	"swift_transit/repo"
 	"swift_transit/rest"
 	busHandler "swift_transit/rest/handlers/bus"
+	busOwnerHandler "swift_transit/rest/handlers/bus_owner"
 	routeHandler "swift_transit/rest/handlers/route"
 	ticketHandler "swift_transit/rest/handlers/ticket"
 	transactionHandler "swift_transit/rest/handlers/transaction"
@@ -89,6 +91,10 @@ func Start() {
 	busHdlr := busHandler.NewHandler(busSvc, ticketSvc, middlewareHandler, mngr, utilHandler, hub)
 	ticketHdlr := ticketHandler.NewHandler(ticketSvc, middlewareHandler, mngr, utilHandler, cnf.PublicBaseURL)
 
-	handler := rest.NewHandler(cnf, middlewareHandler, userHdlr, routeHdlr, busHdlr, ticketHdlr, transHandler)
+	busOwnerRepo := repo.NewBusOwnerRepo(dbCon.DB, utilHandler)
+	busOwnerSvc := bus_owner.NewService(busOwnerRepo, busRepo, ticketRepo, routeRepo, utilHandler)
+	busOwnerHdlr := busOwnerHandler.NewHandler(busOwnerSvc, middlewareHandler, mngr, utilHandler)
+
+	handler := rest.NewHandler(cnf, middlewareHandler, userHdlr, routeHdlr, busHdlr, ticketHdlr, transHandler, busOwnerHdlr)
 	handler.Serve()
 }

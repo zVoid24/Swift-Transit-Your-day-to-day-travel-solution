@@ -10,6 +10,7 @@ class LoginResult {
   final String busId;
   final int busCredentialId;
   final String variant;
+  final String registrationNumber;
   final List<RouteVariant> variants;
 
   LoginResult({
@@ -18,6 +19,7 @@ class LoginResult {
     required this.busId,
     required this.busCredentialId,
     required this.variant,
+    required this.registrationNumber,
     required this.variants,
   });
 }
@@ -95,6 +97,7 @@ class ApiService {
           : int.tryParse(data['bus']['id'].toString()) ?? 0,
       variant: data['bus']['variant']?.toString() ?? variant,
       variants: variants,
+      registrationNumber: data['bus']['registration_number']?.toString() ?? '',
     );
   }
 
@@ -121,6 +124,7 @@ class ApiService {
     required String qrData,
     required String token,
     required int routeId,
+    required String busName,
     required String currentStop,
     required int currentStopOrder,
   }) async {
@@ -134,6 +138,7 @@ class ApiService {
       body: jsonEncode({
         'qr_code': qrData,
         'route_id': routeId,
+        'bus_name': busName,
         'current_stoppage': {"name": currentStop, "order": currentStopOrder},
       }),
     );

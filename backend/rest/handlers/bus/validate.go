@@ -22,7 +22,7 @@ func (h *Handler) ValidateTicket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = h.svc.ValidateTicket(req.TicketID, busData.RouteId)
+	err = h.svc.ValidateTicket(req.TicketID, busData.RouteId, busData.RegistrationNumber)
 	if err != nil {
 		h.utilHandler.SendError(w, "Validation failed", http.StatusBadRequest)
 		return

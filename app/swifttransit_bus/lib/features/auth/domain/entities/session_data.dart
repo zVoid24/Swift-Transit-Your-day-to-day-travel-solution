@@ -4,6 +4,7 @@ class SessionData {
   final String busId;
   final int busCredentialId;
   final String variant;
+  final String registrationNumber;
 
   const SessionData({
     required this.token,
@@ -11,5 +12,6 @@ class SessionData {
     required this.busId,
     required this.busCredentialId,
     required this.variant,
+    required this.registrationNumber,
   });
 }

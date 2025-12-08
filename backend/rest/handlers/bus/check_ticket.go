@@ -25,6 +25,8 @@ func (h *Handler) CheckTicket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	req.RouteID = busData.RouteId
+	req.BusName = busData.RegistrationNumber
+	req.RegistrationNumber = busData.RegistrationNumber
 
 	result, err := h.svc.CheckTicket(req)
 	if err != nil {

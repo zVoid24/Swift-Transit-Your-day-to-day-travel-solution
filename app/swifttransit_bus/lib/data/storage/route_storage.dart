@@ -11,6 +11,7 @@ class RouteStorage {
   static const _busCredentialIdKey = 'bus_credential_id';
   static const _variantKey = 'route_variant';
   static const _routeCacheKey = 'route_cache';
+  static const _registrationNumberKey = 'registration_number';
 
   Future<void> saveAuth({
     required String token,
@@ -18,6 +19,7 @@ class RouteStorage {
     required String busId,
     required int busCredentialId,
     required String variant,
+    required String registrationNumber,
   }) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_tokenKey, token);
@@ -25,6 +27,7 @@ class RouteStorage {
     await prefs.setString(_busIdKey, busId);
     await prefs.setInt(_busCredentialIdKey, busCredentialId);
     await prefs.setString(_variantKey, variant);
+    await prefs.setString(_registrationNumberKey, registrationNumber);
   }
 
   Future<void> saveRoute(BusRoute route) async {
@@ -55,6 +58,11 @@ class RouteStorage {
   Future<String?> get variant async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(_variantKey);
+  }
+
+  Future<String?> get registrationNumber async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_registrationNumberKey);
   }
 
   Future<BusRoute?> get cachedRoute async {

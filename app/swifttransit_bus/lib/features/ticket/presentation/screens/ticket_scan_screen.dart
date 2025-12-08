@@ -81,6 +81,7 @@ class _TicketScanScreenState extends State<TicketScanScreen> {
         qrData: data,
         token: session.token,
         routeId: session.routeId,
+        busName: session.busId,
         currentStop: widget.currentStop.name,
         currentStopOrder: widget.currentStop.order,
       );
@@ -459,6 +460,7 @@ class _TicketScanScreenState extends State<TicketScanScreen> {
                           ),
                         ),
                       const SizedBox(height: 24),
+
                       Text(
                         _isValid == null
                             ? 'Checking Ticket...'

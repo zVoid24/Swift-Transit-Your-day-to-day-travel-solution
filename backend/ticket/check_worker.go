@@ -78,11 +78,13 @@ func (w *TicketCheckWorker) ProcessCheck(event map[string]interface{}) {
 	ticketID := int64(event["ticket_id"].(float64))
 	// currentStoppage := event["current_stoppage"].(string)
 
+	busName, _ := event["bus_name"].(string)
+
 	// 1. Update Ticket Status in DB
 	// We need a method in repo to mark as checked.
 	// Reusing ValidateTicket or creating a new one.
 	// ValidateTicket in repo updates `checked` to true.
-	if err := w.repo.ValidateTicket(ticketID); err != nil {
+	if err := w.repo.ValidateTicket(ticketID, busName); err != nil {
 		log.Printf("Failed to update ticket status in DB: %v", err)
 	}
 

@@ -102,7 +102,34 @@ func (r *routeRepo) Create(route domain.Route) (*domain.Route, error) {
 	return &route, nil
 }
 func (r *routeRepo) FindAll() ([]domain.Route, error) {
-	return nil, nil
+	var routes []domain.Route
+	query := `SELECT id, name, ST_AsGeoJSON(geom) as linestring_geojson FROM routes ORDER BY name`
+	err := r.dbCon.Select(&routes, query)
+	if err != nil {
+		return nil, err
+	}
+
+	// Fetch stops for all routes
+	// This might be heavy if there are many routes, but for now it's fine.
+	// Optimization: Fetch all stops and map them in memory.
+
+	stopQuery := `SELECT id, route_id, stop_order, name, ST_X(geom::geometry) as lon, ST_Y(geom::geometry) as lat, COALESCE(ST_AsGeoJSON(area_geom), '') as area_geom FROM stops ORDER BY route_id, stop_order`
+	var stops []domain.Stop
+	err = r.dbCon.Select(&stops, stopQuery)
+	if err != nil {
+		return nil, err
+	}
+
+	stopMap := make(map[int64][]domain.Stop)
+	for _, stop := range stops {
+		stopMap[stop.RouteId] = append(stopMap[stop.RouteId], stop)
+	}
+
+	for i := range routes {
+		routes[i].Stops = stopMap[routes[i].Id]
+	}
+
+	return routes, nil
 }
 func (r *routeRepo) FindByID(id int64) (*domain.Route, error) {
 	var route domain.Route

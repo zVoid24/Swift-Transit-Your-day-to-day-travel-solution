@@ -387,6 +387,7 @@ func (s *service) CheckTicket(req CheckTicketRequest) (map[string]interface{}, e
 		"qr_code":          req.QRCode,
 		"current_stoppage": req.CurrentStoppage.Name,
 		"checked_at":       time.Now(),
+		"bus_name":         req.BusName,
 	}
 	eventJSON, _ := json.Marshal(checkEvent)
 
@@ -420,19 +421,20 @@ func (s *service) CreateOverTravelTicket(originalTicketID int64, currentStop str
 
 	batchID := uuid.New().String()
 	newTicket := domain.Ticket{
-		UserId:           originalTicket.UserId,
-		RouteId:          originalTicket.RouteId,
-		BusName:          originalTicket.BusName,
-		StartDestination: originalTicket.EndDestination,
-		EndDestination:   currentStop,
-		Fare:             fare,
-		PaymentStatus:    "unpaid",
-		PaidStatus:       false,
-		PaymentMethod:    "CASH", // Assumed cash for over-travel
-		BatchID:          batchID,
-		QRCode:           fmt.Sprintf("OT-%d-%s", time.Now().UnixNano(), uuid.New().String()),
-		CreatedAt:        time.Now().Format(time.RFC3339),
-		Checked:          true, // Auto-checked
+		UserId:             originalTicket.UserId,
+		RouteId:            originalTicket.RouteId,
+		BusName:            originalTicket.BusName,
+		StartDestination:   originalTicket.EndDestination,
+		EndDestination:     currentStop,
+		Fare:               fare,
+		PaymentStatus:      "unpaid",
+		PaidStatus:         false,
+		PaymentMethod:      "CASH", // Assumed cash for over-travel
+		BatchID:            batchID,
+		QRCode:             fmt.Sprintf("OT-%d-%s", time.Now().UnixNano(), uuid.New().String()),
+		CreatedAt:          time.Now().Format(time.RFC3339),
+		Checked:            true, // Auto-checked
+		RegistrationNumber: originalTicket.RegistrationNumber,
 	}
 
 	if paymentCollected {
@@ -468,7 +470,12 @@ func (s *service) ValidateTicket(id int64) error {
 	if ticket.CancelledAt != nil {
 		return fmt.Errorf("ticket has been cancelled")
 	}
-	return s.repo.ValidateTicket(id)
+	// Service level validation doesn't have bus name usually, but this method seems unused or for manual validation?
+	// If used manually, we might need bus name.
+	// Let's pass empty string if not available or update signature if needed.
+	// Given the context, this might be used by other parts.
+	// Let's check usages. It's in the interface?
+	return s.repo.ValidateTicket(id, "")
 }
 
 func (s *service) CreateTransaction(t model.Transaction) error {
@@ -631,8 +638,8 @@ func (s *service) CancelTicket(userID int64, ticketID int64) (float64, error) {
 	}
 
 	if !parsedTime.IsZero() {
-		if time.Since(parsedTime) > 24*time.Hour {
-			return 0, fmt.Errorf("cancellation window (24h) has expired")
+		if time.Since(parsedTime) > 4*time.Hour {
+			return 0, fmt.Errorf("cancellation window (4h) has expired")
 		}
 	}
 

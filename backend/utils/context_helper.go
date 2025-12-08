@@ -2,6 +2,7 @@ package utils
 
 import (
 	"context"
+	"fmt"
 )
 
 type contextKey string
@@ -9,6 +10,7 @@ type contextKey string
 const UserContextKey = contextKey("user")
 
 func (h *Handler) AddToContext(ctx context.Context, userData any) context.Context {
+	fmt.Println(userData)
 	return context.WithValue(ctx, UserContextKey, userData)
 }
 
@@ -18,9 +20,13 @@ func (h *Handler) GetUserFromContext(ctx context.Context) any {
 
 func (h *Handler) GetUserIDFromContext(ctx context.Context) int64 {
 	userData := h.GetUserFromContext(ctx)
+	fmt.Println(userData)
 	if userData == nil {
+		fmt.Println("GetUserIDFromContext: userData is nil")
 		return 0
 	}
+
+	fmt.Printf("GetUserIDFromContext: type=%T, value=%+v\n", userData, userData)
 
 	switch v := userData.(type) {
 	case float64:
@@ -36,6 +42,7 @@ func (h *Handler) GetUserIDFromContext(ctx context.Context) int64 {
 		if id, ok := v["id"].(int64); ok {
 			return id
 		}
+		fmt.Println("GetUserIDFromContext: map does not contain id or id is not a number")
 	}
 	return 0
 }

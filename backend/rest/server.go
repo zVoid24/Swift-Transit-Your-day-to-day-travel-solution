@@ -13,6 +13,7 @@ func (h *Handler) Serve() {
 	h.busHandler.RegisterRoutes(mux)
 	h.ticketHandler.RegisterRoutes(mux)
 	h.transactionHandler.RegisterRoutes(mux)
+	h.busOwnerHandler.RegisterRoutes(mux)
 	mngr := h.mdlw.NewManager()
 	mngr.Use(h.mdlw.Logger, h.mdlw.Cors)
 	wrappedMux := mngr.WrapMux(mux)

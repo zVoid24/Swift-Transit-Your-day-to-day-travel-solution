@@ -3,6 +3,7 @@ package rest
 import (
 	"swift_transit/config"
 	"swift_transit/rest/handlers/bus"
+	"swift_transit/rest/handlers/bus_owner"
 	"swift_transit/rest/handlers/route"
 	"swift_transit/rest/handlers/ticket"
 	"swift_transit/rest/handlers/transaction"
@@ -18,9 +19,10 @@ type Handler struct {
 	busHandler         *bus.Handler
 	ticketHandler      *ticket.Handler
 	transactionHandler *transaction.Handler
+	busOwnerHandler    *bus_owner.Handler
 }
 
-func NewHandler(cnf *config.Config, mdlw *middlewares.Handler, userHandler *user.Handler, routeHandler *route.Handler, busHandler *bus.Handler, ticketHandler *ticket.Handler, transactionHandler *transaction.Handler) *Handler {
+func NewHandler(cnf *config.Config, mdlw *middlewares.Handler, userHandler *user.Handler, routeHandler *route.Handler, busHandler *bus.Handler, ticketHandler *ticket.Handler, transactionHandler *transaction.Handler, busOwnerHandler *bus_owner.Handler) *Handler {
 	return &Handler{
 		cnf:                cnf,
 		mdlw:               mdlw,
@@ -29,5 +31,6 @@ func NewHandler(cnf *config.Config, mdlw *middlewares.Handler, userHandler *user
 		busHandler:         busHandler,
 		ticketHandler:      ticketHandler,
 		transactionHandler: transactionHandler,
+		busOwnerHandler:    busOwnerHandler,
 	}
 }

@@ -1,0 +1,9 @@
+-- +migrate Up
+CREATE TABLE IF NOT EXISTS bus_owners (
+    id SERIAL PRIMARY KEY,
+    username VARCHAR(255) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+ALTER TABLE bus_credentials ADD COLUMN IF NOT EXISTS owner_id INT REFERENCES bus_owners(id);

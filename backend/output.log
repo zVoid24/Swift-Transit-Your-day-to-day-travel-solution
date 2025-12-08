@@ -1,0 +1,9 @@
+PONG
+Redis<localhost:6379 db:0>
+Successfully migrated database
+Server running on 8080
+2025/12/08 15:13:33  [*] Waiting for check events. To exit press CTRL+C
+2025/12/08 15:13:33  [*] Waiting for messages. To exit press CTRL+C
+2025/12/08 15:13:43 POST /auth/login 127.0.0.1:47962 insomnia/12.1.0
+Login attempt for mobile 01580662846. Found user with email: tohasiddique523@gmail.com
+2025/12/08 15:13:43 Completed in 60.255515ms

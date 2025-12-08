@@ -10,6 +10,7 @@ import (
 
 type BusRepo interface {
 	bus.BusRepo
+	CreateCredential(busCred domain.BusCredential) error
 }
 
 type busRepo struct {
@@ -85,9 +86,9 @@ func (r *busRepo) GetBusByRegistrationNumber(regNum string) (*domain.BusCredenti
 
 func (r *busRepo) Create(busCred domain.BusCredential) (*domain.BusCredential, error) {
 	query := `
-                INSERT INTO bus_credentials (registration_number, password, route_id_up, route_id_down)
-                VALUES ($1, $2, $3, $4)
-                RETURNING id, registration_number, password, route_id_up, route_id_down
+                INSERT INTO bus_credentials (registration_number, password, route_id_up, route_id_down, owner_id)
+                VALUES ($1, $2, $3, $4, $5)
+                RETURNING id, registration_number, password, route_id_up, route_id_down, owner_id
         `
 	createdBus := domain.BusCredential{}
 	err := r.dbCon.Get(
@@ -97,9 +98,15 @@ func (r *busRepo) Create(busCred domain.BusCredential) (*domain.BusCredential, e
 		busCred.Password,
 		busCred.RouteIdUp,
 		busCred.RouteIdDown,
+		busCred.OwnerId,
 	)
 	if err != nil {
 		return nil, err
 	}
 	return &createdBus, nil
+}
+
+func (r *busRepo) CreateCredential(busCred domain.BusCredential) error {
+	_, err := r.Create(busCred)
+	return err
 }

@@ -45,9 +45,11 @@ type CheckTicketStoppage struct {
 }
 
 type CheckTicketRequest struct {
-	QRCode          string              `json:"qr_code"`
-	RouteID         int64               `json:"route_id"`
-	CurrentStoppage CheckTicketStoppage `json:"current_stoppage"`
+	QRCode             string              `json:"qr_code"`
+	RouteID            int64               `json:"route_id"`
+	BusName            string              `json:"bus_name"`
+	RegistrationNumber string              `json:"registration_number"`
+	CurrentStoppage    CheckTicketStoppage `json:"current_stoppage"`
 }
 
 type Service interface {
@@ -90,7 +92,7 @@ type TicketRepo interface {
 	Get(id int64) (*domain.Ticket, error)
 	CalculateFare(routeId int64, start, end string) (float64, error)
 	GetByUserID(userId int64, limit, offset int) ([]domain.Ticket, int, error)
-	ValidateTicket(id int64) error
+	ValidateTicket(id int64, busName string) error
 	CountActiveTicketsByRoute(userId int64, routeId int64) (int, error)
 	UpdateBatchPaymentStatus(batchID string, paid bool, status string, markUsed bool) error
 	CancelTicket(id int64, cancelledAt time.Time, status string) error
