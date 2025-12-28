@@ -2,6 +2,8 @@
 
 This document explains the end-to-end backend architecture for Swift Transit with the three primary actors: **Passenger/User**, **Bus (driver/device)**, and **Bus Owner/Operator**.
 
+Neovim Test commit
+
 ## High-level overview
 - **Entry points**: REST HTTP API (`rest` package) and WebSocket streams for live location (`location` package).
 - **Business services**: Domain services for users, routes, buses, tickets, and transactions orchestrated in `cmd/serve.go`.
